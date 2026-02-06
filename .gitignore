@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+.next/
+out/
+
+# Keys and secrets
+*.pem
+*.key
+
+# Data files (downloaded PDFs)
+backend/data/pdfs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# Claude Code local settings
+.claude/
+
+# Pip install artifacts
+=*
+
+# Logs
+*.log
+
+# Coverage
+htmlcov/
+.coverage
+.pytest_cache/
