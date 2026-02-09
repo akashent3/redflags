@@ -80,7 +80,8 @@ def calculate_api_flags(data: Dict) -> List[Dict]:
 def _check_pat_vs_cfo(pl: list, cf: list) -> Dict:
     """Flag #7: PAT vs CFO divergence - profit growing but CFO not keeping up."""
     flag = {"flag_number": 7, "flag_name": "PAT vs CFO Divergence",
-            "category": "Cash Flow", "severity": "HIGH", "source": "API"}
+            "category": "Cash Flow", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if PAT growth exceeds CFO growth by >30%, or PAT grows >10% while CFO declines >10%"}
 
     if len(pl) < 2 or len(cf) < 2:
         return {**flag, "triggered": False, "reason": "Insufficient data (need 2+ years)"}
@@ -112,7 +113,8 @@ def _check_pat_vs_cfo(pl: list, cf: list) -> Dict:
 def _check_receivables_growth(pl: list, bs: list) -> Dict:
     """Flag #8: Trade receivables growing faster than revenue."""
     flag = {"flag_number": 8, "flag_name": "Receivables > Revenue Growth",
-            "category": "Cash Flow", "severity": "HIGH", "source": "API"}
+            "category": "Cash Flow", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if receivables growth exceeds revenue growth by >15% AND receivable days >45"}
 
     if len(pl) < 2 or len(bs) < 2:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -143,7 +145,8 @@ def _check_receivables_growth(pl: list, bs: list) -> Dict:
 def _check_inventory_growth(pl: list, bs: list) -> Dict:
     """Flag #9: Inventory growing faster than COGS."""
     flag = {"flag_number": 9, "flag_name": "Inventory > COGS Growth",
-            "category": "Cash Flow", "severity": "MEDIUM", "source": "API"}
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if inventory growth exceeds COGS growth by >20% AND inventory days >60"}
 
     if len(pl) < 2 or len(bs) < 2:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -175,7 +178,8 @@ def _check_inventory_growth(pl: list, bs: list) -> Dict:
 def _check_capex_vs_depreciation(pl: list, cf: list) -> Dict:
     """Flag #10: Capex significantly exceeding depreciation."""
     flag = {"flag_number": 10, "flag_name": "Capex >> Depreciation",
-            "category": "Cash Flow", "severity": "MEDIUM", "source": "API"}
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if capex exceeds depreciation by more than 3x"}
 
     if len(pl) < 1 or len(cf) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -198,7 +202,8 @@ def _check_capex_vs_depreciation(pl: list, cf: list) -> Dict:
 def _check_exceptional_items(pl: list) -> Dict:
     """Flag #11: Material exceptional items affecting profit."""
     flag = {"flag_number": 11, "flag_name": "Exceptional Items Material",
-            "category": "Cash Flow", "severity": "MEDIUM", "source": "API"}
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if exceptional items exceed 10% of PAT"}
 
     if len(pl) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -220,7 +225,8 @@ def _check_exceptional_items(pl: list) -> Dict:
 def _check_negative_cfo(cf: list) -> Dict:
     """Flag #12: Negative operating cash flow."""
     flag = {"flag_number": 12, "flag_name": "Negative Operating Cash Flow",
-            "category": "Cash Flow", "severity": "CRITICAL", "source": "API"}
+            "category": "Cash Flow", "severity": "CRITICAL", "source": "API",
+            "rule": "Triggers if cash flow from operations (CFO) is negative in the latest year"}
 
     if len(cf) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -246,7 +252,8 @@ def _check_negative_cfo(cf: list) -> Dict:
 def _check_ccc(pl: list, bs: list) -> Dict:
     """Flag #13: Cash Conversion Cycle deteriorating significantly."""
     flag = {"flag_number": 13, "flag_name": "Cash Conversion Cycle Deteriorating",
-            "category": "Cash Flow", "severity": "MEDIUM", "source": "API"}
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if CCC increased by >30 days YoY AND CCC >90 days"}
 
     if len(pl) < 2 or len(bs) < 2:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -278,7 +285,8 @@ def _check_ccc(pl: list, bs: list) -> Dict:
 def _check_other_income(pl: list) -> Dict:
     """Flag #14: Other income unusually high relative to operating revenue."""
     flag = {"flag_number": 14, "flag_name": "Other Income Dependency",
-            "category": "Cash Flow", "severity": "LOW", "source": "API"}
+            "category": "Cash Flow", "severity": "LOW", "source": "API",
+            "rule": "Triggers if other income >15% of revenue OR >30% of PAT"}
 
     if len(pl) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -309,7 +317,8 @@ def _check_other_income(pl: list) -> Dict:
 def _check_promoter_pledge(declaration: dict) -> Dict:
     """Flag #22: Promoter shares pledged."""
     flag = {"flag_number": 22, "flag_name": "High Promoter Pledge",
-            "category": "Promoter", "severity": "CRITICAL", "source": "API"}
+            "category": "Promoter", "severity": "CRITICAL", "source": "API",
+            "rule": "Triggers if promoter shares are pledged (per SEBI declaration)"}
 
     decl_list = declaration.get("declaration", [])
     if not decl_list:
@@ -329,7 +338,8 @@ def _check_promoter_pledge(declaration: dict) -> Dict:
 def _check_pledge_increasing(declaration: dict) -> Dict:
     """Flag #23: Promoter pledge increasing over quarters."""
     flag = {"flag_number": 23, "flag_name": "Promoter Pledge Increasing",
-            "category": "Promoter", "severity": "HIGH", "source": "API"}
+            "category": "Promoter", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if promoter pledge appeared in recent quarters (was absent earlier)"}
 
     decl_list = declaration.get("declaration", [])
     if len(decl_list) < 4:
@@ -356,7 +366,8 @@ def _check_pledge_increasing(declaration: dict) -> Dict:
 def _check_promoter_selling(pattern: dict) -> Dict:
     """Flag #24: Promoter holding declining over quarters."""
     flag = {"flag_number": 24, "flag_name": "Promoter Holding Declining",
-            "category": "Promoter", "severity": "MEDIUM", "source": "API"}
+            "category": "Promoter", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if promoter holding declined by >2% over 4 quarters"}
 
     rows = pattern.get("rows", [])
     columns = pattern.get("columns", [])
@@ -402,7 +413,8 @@ def _check_promoter_selling(pattern: dict) -> Dict:
 def _check_debt_equity(bs: list) -> Dict:
     """Flag #32: Debt to Equity ratio > 1."""
     flag = {"flag_number": 32, "flag_name": "High Debt to Equity",
-            "category": "Balance Sheet", "severity": "HIGH", "source": "API"}
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if Debt/Equity ratio >1.0 OR equity is negative"}
 
     if len(bs) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -436,7 +448,8 @@ def _check_debt_equity(bs: list) -> Dict:
 def _check_interest_coverage(pl: list) -> Dict:
     """Flag #33: Interest coverage ratio below 2x."""
     flag = {"flag_number": 33, "flag_name": "Low Interest Coverage",
-            "category": "Balance Sheet", "severity": "HIGH", "source": "API"}
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if interest coverage ratio (EBIT/Finance costs) is below 2.0x"}
 
     if len(pl) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -462,7 +475,8 @@ def _check_interest_coverage(pl: list) -> Dict:
 def _check_st_debt(bs: list) -> Dict:
     """Flag #34: Short-term debt > 60% of total debt."""
     flag = {"flag_number": 34, "flag_name": "High Short-Term Debt Ratio",
-            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API"}
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if short-term borrowings >60% of total borrowings AND total debt >1B INR"}
 
     if len(bs) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -486,7 +500,8 @@ def _check_st_debt(bs: list) -> Dict:
 def _check_intangibles(bs: list) -> Dict:
     """Flag #38: Intangible assets growing as % of total assets."""
     flag = {"flag_number": 38, "flag_name": "Intangibles Growing",
-            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API"}
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if intangibles (goodwill + intangible assets) >15% of total assets AND grew >3pp YoY"}
 
     if len(bs) < 2:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
@@ -519,7 +534,8 @@ def _check_intangibles(bs: list) -> Dict:
 def _check_q4_revenue(pl_annual: list, pl_quarterly: list) -> Dict:
     """Flag #39: Q4 revenue concentration (>35% of annual in a single quarter)."""
     flag = {"flag_number": 39, "flag_name": "Q4 Revenue Concentration",
-            "category": "Revenue", "severity": "MEDIUM", "source": "API"}
+            "category": "Revenue", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if any single quarter contributes >35% of annual revenue"}
 
     if not pl_annual or len(pl_quarterly) < 4:
         return {**flag, "triggered": False, "reason": "Insufficient quarterly data"}

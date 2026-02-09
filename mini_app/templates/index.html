@@ -433,7 +433,7 @@
              data-triggered="{{ 'true' if flag.triggered else 'false' }}"
              data-source="{{ flag.get('source', 'unknown') | lower }}">
             <div class="flag-status {{ 'triggered' if flag.triggered else 'clear' }}">
-                {{ '!' if flag.triggered else '&#10003;' }}
+                {% if flag.triggered %}<span style="color:#ef4444;font-weight:700;">!</span>{% else %}<span style="color:#22c55e;">{{ "\u2713" }}</span>{% endif %}
             </div>
             <div class="flag-body">
                 <div class="flag-title">
@@ -447,6 +447,11 @@
                     </span>
                     {% endif %}
                 </div>
+                {% if flag.get('rule') %}
+                <div style="color: #60a5fa; font-size: 0.82em; margin-bottom: 4px;">
+                    Rule: {{ flag.rule }}
+                </div>
+                {% endif %}
                 <div class="flag-evidence">
                     {{ flag.get('evidence') or flag.get('reason', 'No data available') }}
                     {% if flag.get('details') %}

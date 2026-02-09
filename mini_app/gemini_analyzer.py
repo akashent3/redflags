@@ -24,7 +24,14 @@ Analyze this annual report and check for ALL 26 red flags listed below. For each
 3. "evidence": specific text/numbers from the report supporting your finding
 4. "details": any additional context
 
-Return your response as a valid JSON object with the exact structure shown below. Do NOT include any text before or after the JSON.
+**CRITICAL JSON FORMATTING RULES:**
+- Return ONLY a valid JSON object. No markdown, no ```json blocks, no text before or after.
+- In ALL string values, NEVER use double quotes. Use single quotes (') instead when quoting text from the report.
+- Example: "evidence": "The auditor states 'there has been no resignation' on page 344"
+- Keep evidence concise (under 200 characters). Cite page numbers and key facts only.
+- This is essential to avoid JSON parsing errors.
+
+Return your response as a valid JSON object with the exact structure shown below.
 
 {
   "statement_type_used": "consolidated" or "standalone",
@@ -35,6 +42,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Auditor Resignation Mid-Term",
       "category": "Auditor",
       "severity": "HIGH",
+      "rule": "Auditor resigned before completing their term (not at AGM rotation)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -45,6 +53,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Qualified/Adverse/Disclaimer Opinion",
       "category": "Auditor",
       "severity": "CRITICAL",
+      "rule": "Auditor issued a qualified, adverse, or disclaimer opinion instead of unmodified/clean opinion",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -55,6 +64,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Emphasis of Matter",
       "category": "Auditor",
       "severity": "MEDIUM",
+      "rule": "Auditor included Emphasis of Matter or Other Matter paragraphs highlighting concerns",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -65,6 +75,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Going Concern Doubt",
       "category": "Auditor",
       "severity": "CRITICAL",
+      "rule": "Auditor or notes mention material uncertainty about ability to continue as going concern",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -75,6 +86,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "KAM Revenue Recognition",
       "category": "Auditor",
       "severity": "HIGH",
+      "rule": "Revenue recognition listed as a Key Audit Matter (high risk area per auditor)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -85,6 +97,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Audit Fees Unusual",
       "category": "Auditor",
       "severity": "LOW",
+      "rule": "Audit fees unusually low (<0.01% of revenue) or non-audit fees exceed audit fees",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -95,6 +108,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "RPT > 10% Revenue",
       "category": "Related Party",
       "severity": "HIGH",
+      "rule": "Total related party transactions exceed 10% of revenue from operations",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -105,6 +119,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Loans to Related Parties",
       "category": "Related Party",
       "severity": "HIGH",
+      "rule": "Material loans, advances, or deposits given to related parties",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -115,6 +130,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "RP Premium/Non-Arms Length Transactions",
       "category": "Related Party",
       "severity": "HIGH",
+      "rule": "Transactions with related parties at prices different from market/arms length",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -125,6 +141,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "RPT Revenue Increasing",
       "category": "Related Party",
       "severity": "MEDIUM",
+      "rule": "Revenue from related parties increasing as proportion of total revenue YoY",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -135,6 +152,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Complex Related Party Structure",
       "category": "Related Party",
       "severity": "MEDIUM",
+      "rule": "More than 20 related entities or entities in tax havens (Mauritius, Cyprus, Cayman, BVI)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -145,6 +163,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Loans to Directors",
       "category": "Related Party",
       "severity": "CRITICAL",
+      "rule": "Any loans or advances given to directors, KMP, or their relatives (Sec 185/186)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -155,6 +174,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "New Related Parties Added",
       "category": "Related Party",
       "severity": "MEDIUM",
+      "rule": "New related parties (subsidiaries, associates, JVs) added during the year",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -165,6 +185,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Disproportionate Director Salary",
       "category": "Promoter",
       "severity": "MEDIUM",
+      "rule": "Director remuneration >10% of net profit or increased despite declining profits",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -175,6 +196,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Company Name Change",
       "category": "Promoter",
       "severity": "LOW",
+      "rule": "Company changed its name during or shortly before the reporting period",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -185,6 +207,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Inter-Corporate Deposits",
       "category": "Promoter",
       "severity": "HIGH",
+      "rule": "Material inter-corporate deposits or loans given to group/associate companies",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -195,6 +218,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Independent Director Exit",
       "category": "Governance",
       "severity": "HIGH",
+      "rule": "One or more independent directors resigned during the year (not at end of term)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -205,6 +229,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Audit Committee Issues",
       "category": "Governance",
       "severity": "MEDIUM",
+      "rule": "Audit committee has <3 members, <2/3 independent, no financial expert, or <4 meetings/year",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -215,6 +240,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "SEBI/Legal Penalties",
       "category": "Governance",
       "severity": "HIGH",
+      "rule": "SEBI orders, show cause notices, penalties, or regulatory non-compliance reported",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -225,6 +251,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Whistleblower Complaints",
       "category": "Governance",
       "severity": "CRITICAL",
+      "rule": "Whistleblower/vigil mechanism complaints received, or fraud reported under Sec 143(12)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -235,6 +262,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Contingent Liabilities High",
       "category": "Balance Sheet",
       "severity": "HIGH",
+      "rule": "Contingent liabilities (tax demands, legal cases, guarantees) exceed 20% of net worth",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -245,6 +273,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Debt Restructuring",
       "category": "Balance Sheet",
       "severity": "CRITICAL",
+      "rule": "Any sign of debt restructuring, OTS, CDR, moratorium, or change in repayment terms",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -255,6 +284,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Asset Pledging",
       "category": "Balance Sheet",
       "severity": "MEDIUM",
+      "rule": "Significant assets (>30% of total) pledged as collateral for borrowings",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -265,6 +295,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Revenue Recognition Policy Change",
       "category": "Revenue",
       "severity": "HIGH",
+      "rule": "Change in revenue recognition accounting policy during the year",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -275,6 +306,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Unbilled Revenue High",
       "category": "Revenue",
       "severity": "MEDIUM",
+      "rule": "Unbilled revenue or contract assets exceed 10% of total revenue and growing",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -285,6 +317,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "MD&A Tone Defensive",
       "category": "Textual",
       "severity": "MEDIUM",
+      "rule": "MD&A uses excessive blame on external factors, avoids specifics, or is evasive about problems",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -449,6 +482,56 @@ Remember: Return ONLY the JSON object, no other text. Be precise and cite specif
 """
 
 
+def _repair_json(json_str: str) -> str:
+    """Attempt to repair common JSON issues from LLM output.
+    Mainly fixes unescaped double quotes inside string values.
+    """
+    # Strategy: walk through character by character, track if we're inside a string
+    result = []
+    i = 0
+    in_string = False
+    escape_next = False
+
+    while i < len(json_str):
+        ch = json_str[i]
+
+        if escape_next:
+            result.append(ch)
+            escape_next = False
+            i += 1
+            continue
+
+        if ch == '\\' and in_string:
+            result.append(ch)
+            escape_next = True
+            i += 1
+            continue
+
+        if ch == '"':
+            if not in_string:
+                # Opening a string
+                in_string = True
+                result.append(ch)
+            else:
+                # Could be closing the string or an unescaped inner quote
+                # Look ahead to determine: if followed by , : } ] or whitespace+these, it's closing
+                rest = json_str[i + 1:].lstrip()
+                if not rest or rest[0] in ',:}]':
+                    # This is the real closing quote
+                    in_string = False
+                    result.append(ch)
+                else:
+                    # Unescaped quote inside string - escape it
+                    result.append("'")
+            i += 1
+            continue
+
+        result.append(ch)
+        i += 1
+
+    return ''.join(result)
+
+
 def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None) -> Dict:
     """Analyze an annual report PDF using Gemini for 26 text-based red flags.
 
@@ -483,17 +566,35 @@ def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None) -> Dict:
     # Parse the JSON response
     raw_text = response.text.strip()
 
+    # Strip markdown code fences if present
+    if raw_text.startswith("```"):
+        raw_text = re.sub(r'^```(?:json)?\s*', '', raw_text)
+        raw_text = re.sub(r'\s*```$', '', raw_text)
+
     # Try to extract JSON from the response
     json_match = re.search(r'\{[\s\S]*\}', raw_text)
     if not json_match:
         logger.error(f"No JSON found in Gemini response: {raw_text[:500]}")
         raise ValueError("Gemini did not return valid JSON")
 
+    json_str = json_match.group()
+
+    # Attempt 1: Direct parse
+    result = None
     try:
-        result = json.loads(json_match.group())
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse Gemini JSON: {e}\nRaw: {raw_text[:1000]}")
-        raise ValueError(f"Invalid JSON from Gemini: {e}")
+        result = json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 2: Fix common issues - unescaped quotes inside string values
+    if result is None:
+        try:
+            repaired = _repair_json(json_str)
+            result = json.loads(repaired)
+            logger.info("JSON repaired successfully after initial parse failure")
+        except (json.JSONDecodeError, Exception) as e2:
+            logger.error(f"Failed to parse Gemini JSON even after repair: {e2}\nRaw: {raw_text[:1500]}")
+            raise ValueError(f"Invalid JSON from Gemini: {e2}")
 
     logger.info(f"Gemini analysis complete. Statement type: {result.get('statement_type_used', 'unknown')}")
     return result
@@ -511,6 +612,7 @@ def parse_gemini_flags(gemini_result: Dict) -> List[Dict]:
             "category": flag_info.get("category", "Unknown"),
             "severity": flag_info.get("severity", "MEDIUM"),
             "source": "PDF/Gemini",
+            "rule": flag_info.get("rule", ""),
             "triggered": flag_info.get("triggered", False),
             "confidence": flag_info.get("confidence", 0),
             "evidence": flag_info.get("evidence", ""),
