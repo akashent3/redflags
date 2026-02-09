@@ -4,6 +4,11 @@ Layer 1: Regex keyword scanning on all pages (FREE, fast)
 Layer 2: Signature/footer detection for section boundaries
 Layer 3: Sub-section detection (RPT within Notes)
 Layer 4: Content fingerprint validation
+
+Consolidated vs Standalone logic:
+- Detects BOTH consolidated and standalone financial sections separately
+- Prefers consolidated; falls back to standalone only if consolidated not found
+- Records the chosen statement_type for consistent multi-year comparisons
 """
 
 import logging
@@ -13,15 +18,50 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
-# --- Layer 1: Section header patterns ---
-SECTION_PATTERNS = {
+# --- Financial section patterns: detected TWICE (consolidated + standalone) ---
+# These are the financial sections that appear in both forms in annual reports
+FINANCIAL_SECTION_PATTERNS = {
     "auditor_report": [
         r"(?i)independent\s+auditor.?s?\s+report",
-        r"(?i)independent\s+auditor.?s\s+report",
         r"(?i)report\s+of\s+the\s+auditors?",
         r"(?i)auditors?\s+report\s+on",
         r"(?i)report\s+on\s+audit\s+of",
     ],
+    "balance_sheet": [
+        r"(?i)balance\s+sheet\s+as\s+at",
+        r"(?i)statement\s+of\s+financial\s+position",
+    ],
+    "profit_loss_statement": [
+        r"(?i)statement\s+of\s+profit\s+and\s+loss",
+        r"(?i)profit\s+(&|and)\s+loss\s+(statement|account)",
+        r"(?i)statement\s+of\s+income",
+        r"(?i)income\s+statement",
+    ],
+    "cash_flow_statement": [
+        r"(?i)cash\s+flow\s+statement",
+        r"(?i)statement\s+of\s+cash\s+flows?",
+    ],
+    "notes_to_accounts": [
+        r"(?i)notes\s+(to|forming\s+part\s+of)\s+(the\s+)?(standalone\s+|consolidated\s+)?(financial)",
+        r"(?i)notes\s+to\s+(the\s+)?(standalone\s+|consolidated\s+)?accounts",
+        r"(?i)notes\s+to\s+consolidated\s+financial\s+statements",
+        r"(?i)notes\s+to\s+standalone\s+financial\s+statements",
+    ],
+}
+
+# Keywords that indicate CONSOLIDATED vs STANDALONE on or near a section header
+CONSOLIDATED_INDICATORS = [
+    r"(?i)consolidated",
+    r"(?i)group\s+financial",
+]
+STANDALONE_INDICATORS = [
+    r"(?i)standalone",
+    r"(?i)stand\s*-\s*alone",
+    r"(?i)separate\s+financial",
+]
+
+# --- Non-financial sections (only appear once, no consolidated/standalone split) ---
+NON_FINANCIAL_SECTION_PATTERNS = {
     "directors_report": [
         r"(?i)director.?s?\s+report",
         r"(?i)board.?s?\s+report",
@@ -37,27 +77,12 @@ SECTION_PATTERNS = {
         r"(?i)corporate\s+governance\s+report",
         r"(?i)report\s+on\s+corporate\s+governance",
     ],
-    "balance_sheet": [
-        r"(?i)balance\s+sheet\s+as\s+at",
-        r"(?i)statement\s+of\s+financial\s+position",
-        r"(?i)standalone\s+balance\s+sheet",
-    ],
-    "profit_loss_statement": [
-        r"(?i)statement\s+of\s+profit\s+and\s+loss",
-        r"(?i)profit\s+(&|and)\s+loss\s+(statement|account)",
-        r"(?i)statement\s+of\s+income",
-        r"(?i)income\s+statement",
-    ],
-    "cash_flow_statement": [
-        r"(?i)cash\s+flow\s+statement",
-        r"(?i)statement\s+of\s+cash\s+flows?",
-    ],
-    "notes_to_accounts": [
-        r"(?i)notes\s+(to|forming\s+part\s+of)\s+(the\s+)?(standalone\s+)?(financial|consolidated)",
-        r"(?i)notes\s+to\s+accounts",
-        r"(?i)note\s+1\s*[:.]\s*(?:corporate|significant|company)",
-        r"(?i)significant\s+accounting\s+policies",
-    ],
+}
+
+# Combined for backward compat (used only in boundary derivation)
+SECTION_PATTERNS = {
+    **FINANCIAL_SECTION_PATTERNS,
+    **NON_FINANCIAL_SECTION_PATTERNS,
 }
 
 # --- Layer 2: Section end markers ---
