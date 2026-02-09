@@ -3,7 +3,7 @@
 import logging
 from typing import Dict, List
 
-from red_flags.models import FlagCategory, FlagSeverity, RedFlagResult
+from services.models import FlagCategory, FlagSeverity, RedFlagResult
 
 logger = logging.getLogger(__name__)
 
