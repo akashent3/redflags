@@ -119,7 +119,20 @@ python app.py
 
 Server starts at: http://localhost:8000
 
-## FinEdge Flags (14 total)
+## Dependencies (`requirements.txt`)
+```
+fastapi==0.109.1          # Updated for ReDoS security fix
+uvicorn==0.27.0
+python-multipart==0.0.22  # Updated for multiple security fixes
+requests==2.31.0
+google-generativeai==0.3.2
+python-dotenv==1.0.0
+pydantic==2.5.0
+```
+
+**Security Updates Applied:**
+- `fastapi` 0.109.0 → 0.109.1: Fixes Content-Type Header ReDoS vulnerability
+- `python-multipart` 0.0.6 → 0.0.22: Fixes arbitrary file write, DoS, and ReDoS vulnerabilities
 
 ### Cash Flow (8 flags)
 - #7: PAT Growing, CFO Flat (HIGH)
