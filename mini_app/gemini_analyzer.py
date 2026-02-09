@@ -28,7 +28,8 @@ Analyze this annual report and check for ALL 26 red flags listed below. For each
 - Return ONLY a valid JSON object. No markdown, no ```json blocks, no text before or after.
 - In ALL string values, NEVER use double quotes. Use single quotes (') instead when quoting text from the report.
 - Example: "evidence": "The auditor states 'there has been no resignation' on page 344"
-- Keep evidence concise (under 200 characters). Cite page numbers and key facts only.
+- Keep evidence VERY short (under 100 characters). Just state the finding. Example: 'No auditor resignation found (page 344)' or 'Qualified opinion issued on inventory valuation (page 89)'.
+- Keep details field VERY short (under 80 characters) or empty string.
 - This is essential to avoid JSON parsing errors.
 
 Return your response as a valid JSON object with the exact structure shown below.
@@ -532,6 +533,35 @@ def _repair_json(json_str: str) -> str:
     return ''.join(result)
 
 
+def _fix_truncated_json(json_str: str) -> str:
+    """Fix truncated JSON by removing the last incomplete field and closing all open braces."""
+    # First apply quote repair
+    json_str = _repair_json(json_str)
+
+    # Find the last successfully complete key-value pair
+    # Look for the last complete "}" that closes a flag object
+    last_complete = json_str.rfind('}')
+    if last_complete == -1:
+        return json_str
+
+    # Try progressively trimming from the end to find valid JSON
+    for i in range(last_complete, max(last_complete - 2000, 0), -1):
+        if json_str[i] == '}':
+            attempt = json_str[:i + 1]
+            # Count open/close braces and brackets
+            open_braces = attempt.count('{') - attempt.count('}')
+            open_brackets = attempt.count('[') - attempt.count(']')
+            # Close them
+            attempt += '}' * open_braces + ']' * open_brackets
+            try:
+                json.loads(attempt)
+                return attempt
+            except json.JSONDecodeError:
+                continue
+
+    return json_str
+
+
 def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None) -> Dict:
     """Analyze an annual report PDF using Gemini for 26 text-based red flags.
 
@@ -559,7 +589,7 @@ def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None) -> Dict:
         [pdf_file, ANALYSIS_PROMPT],
         generation_config=genai.GenerationConfig(
             temperature=0.1,
-            max_output_tokens=8192,
+            max_output_tokens=16384,
         ),
     )
 
@@ -592,9 +622,18 @@ def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None) -> Dict:
             repaired = _repair_json(json_str)
             result = json.loads(repaired)
             logger.info("JSON repaired successfully after initial parse failure")
-        except (json.JSONDecodeError, Exception) as e2:
-            logger.error(f"Failed to parse Gemini JSON even after repair: {e2}\nRaw: {raw_text[:1500]}")
-            raise ValueError(f"Invalid JSON from Gemini: {e2}")
+        except (json.JSONDecodeError, Exception):
+            pass
+
+    # Attempt 3: Truncated response - close all open braces/brackets
+    if result is None:
+        try:
+            fixed = _fix_truncated_json(json_str)
+            result = json.loads(fixed)
+            logger.info("Truncated JSON fixed successfully")
+        except (json.JSONDecodeError, Exception) as e3:
+            logger.error(f"Failed to parse Gemini JSON after all attempts: {e3}\nRaw: {raw_text[:1500]}")
+            raise ValueError(f"Invalid JSON from Gemini: {e3}")
 
     logger.info(f"Gemini analysis complete. Statement type: {result.get('statement_type_used', 'unknown')}")
     return result
