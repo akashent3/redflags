@@ -1,9 +1,10 @@
 """RedFlag AI Mini App - FastAPI orchestrator.
 
 Analyzes Indian company annual reports for financial red flags using:
-1. FinEdge API for 16 numerical flags (instant, accurate)
-2. Gemini 2.5 Flash for 26 PDF-based flags (single prompt)
+1. FinEdge API for up to 21 numerical flags (instant, accurate)
+2. Gemini 2.5 Flash for 23 PDF-based flags (single prompt)
 3. Weighted risk scoring across 8 categories
+4. Sector-based flag filtering for banks/NBFCs/financial services
 """
 
 import json
@@ -30,13 +31,23 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="RedFlag AI - Mini App", version="0.1.0")
+app = FastAPI(title="RedFlag AI - Mini App", version="0.2.0")
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Store results in memory for the demo
 results_store = {}
+
+# Keywords to identify financial sector companies
+FINANCIAL_SECTOR_KEYWORDS = ["bank", "nbfc", "financial services", "housing finance", "insurance"]
+
+
+def detect_financial_sector(profile: dict) -> bool:
+    """Check if a company belongs to financial sector (banks, NBFCs, insurance, etc.)."""
+    sector = (profile.get("sector", "") or "").lower()
+    industry = (profile.get("industry", "") or "").lower()
+    return any(kw in sector or kw in industry for kw in FINANCIAL_SECTOR_KEYWORDS)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -58,6 +69,7 @@ async def analyze(
     api_data_raw = {}
     gemini_raw = {}
     symbol_info = None
+    is_financial = False
 
     # --- Step 1: Find company symbol via FinEdge API ---
     logger.info(f"Searching for symbol: {company_name}")
@@ -77,7 +89,15 @@ async def analyze(
 
         try:
             api_data_raw = client.fetch_all_data(symbol)
-            api_flags_result = calculate_api_flags(api_data_raw)
+
+            # Detect financial sector from company profile
+            profile = api_data_raw.get("profile", {})
+            is_financial = detect_financial_sector(profile)
+            if is_financial:
+                logger.info(f"Financial sector detected: {profile.get('sector', '')} / {profile.get('industry', '')}. "
+                            f"Skipping incompatible API flags.")
+
+            api_flags_result = calculate_api_flags(api_data_raw, is_financial_sector=is_financial)
             logger.info(f"API flags calculated: {sum(1 for f in api_flags_result if f['triggered'])} triggered "
                         f"out of {len(api_flags_result)}")
         except Exception as e:
@@ -115,13 +135,18 @@ async def analyze(
     elapsed = round(time.time() - start_time, 1)
 
     # Build response
+    sector_label = api_data_raw.get("profile", {}).get("sector", "N/A")
+    if is_financial:
+        sector_label += " (Financial Sector - reduced API flags)"
+
     result = {
         "company": {
             "name": symbol_info["name"] if symbol_info else company_name,
             "symbol": symbol_info["symbol"] if symbol_info else "N/A",
-            "sector": api_data_raw.get("profile", {}).get("sector", "N/A"),
+            "sector": sector_label,
             "industry": api_data_raw.get("profile", {}).get("industry", "N/A"),
             "statement_type": api_data_raw.get("statement_type", gemini_raw.get("statement_type_used", "N/A")),
+            "is_financial_sector": is_financial,
         },
         "risk_score": risk_score,
         "flags": all_flags,

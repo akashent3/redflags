@@ -1,4 +1,4 @@
-"""Single Gemini prompt analyzer for 26 PDF-based red flags."""
+"""Single Gemini prompt analyzer for 23 PDF-based red flags."""
 
 import google.generativeai as genai
 import json
@@ -18,7 +18,7 @@ ANALYSIS_PROMPT = """You are an expert Indian financial analyst specializing in 
 - If both consolidated and standalone are present, STRICTLY use ONLY consolidated figures.
 - State clearly at the top which type you used: "consolidated" or "standalone".
 
-Analyze this annual report and check for ALL 26 red flags listed below. For each flag, provide:
+Analyze this annual report and check for ALL 23 red flags listed below. For each flag, provide:
 1. "triggered": true/false
 2. "confidence": 0-100 (how confident you are)
 3. "evidence": specific text/numbers from the report supporting your finding
@@ -38,17 +38,6 @@ Return your response as a valid JSON object with the exact structure shown below
   "statement_type_used": "consolidated" or "standalone",
   "analysis_year": "FY ending year e.g. 2024",
   "flags": {
-    "auditor_resignation": {
-      "flag_number": 1,
-      "flag_name": "Auditor Resignation Mid-Term",
-      "category": "Auditor",
-      "severity": "HIGH",
-      "rule": "Auditor resigned before completing their term (not at AGM rotation)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
     "qualified_opinion": {
       "flag_number": 2,
       "flag_name": "Qualified/Adverse/Disclaimer Opinion",
@@ -120,7 +109,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Loans to Related Parties",
       "category": "Related Party",
       "severity": "HIGH",
-      "rule": "Material loans, advances, or deposits given to related parties",
+      "rule": "Loans/advances to related parties exceed 5% of revenue OR 5% of net profit (PAT)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -148,34 +137,12 @@ Return your response as a valid JSON object with the exact structure shown below
       "evidence": "explanation",
       "details": ""
     },
-    "complex_rp_structure": {
-      "flag_number": 19,
-      "flag_name": "Complex Related Party Structure",
-      "category": "Related Party",
-      "severity": "MEDIUM",
-      "rule": "More than 20 related entities or entities in tax havens (Mauritius, Cyprus, Cayman, BVI)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
     "loans_to_directors": {
       "flag_number": 20,
       "flag_name": "Loans to Directors",
       "category": "Related Party",
       "severity": "CRITICAL",
       "rule": "Any loans or advances given to directors, KMP, or their relatives (Sec 185/186)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "new_related_parties": {
-      "flag_number": 21,
-      "flag_name": "New Related Parties Added",
-      "category": "Related Party",
-      "severity": "MEDIUM",
-      "rule": "New related parties (subsidiaries, associates, JVs) added during the year",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -192,34 +159,12 @@ Return your response as a valid JSON object with the exact structure shown below
       "evidence": "explanation",
       "details": ""
     },
-    "name_change": {
-      "flag_number": 26,
-      "flag_name": "Company Name Change",
-      "category": "Promoter",
-      "severity": "LOW",
-      "rule": "Company changed its name during or shortly before the reporting period",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
     "icds": {
       "flag_number": 27,
       "flag_name": "Inter-Corporate Deposits",
       "category": "Promoter",
       "severity": "HIGH",
       "rule": "Material inter-corporate deposits or loans given to group/associate companies",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "id_exit": {
-      "flag_number": 28,
-      "flag_name": "Independent Director Exit",
-      "category": "Governance",
-      "severity": "HIGH",
-      "rule": "One or more independent directors resigned during the year (not at end of term)",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -291,6 +236,17 @@ Return your response as a valid JSON object with the exact structure shown below
       "evidence": "explanation",
       "details": ""
     },
+    "bad_debt_provisioning": {
+      "flag_number": 50,
+      "flag_name": "Bad Debt Provisioning Increasing",
+      "category": "Balance Sheet",
+      "severity": "MEDIUM",
+      "rule": "Provision for doubtful debts increased >50% YoY or increasing for 2+ consecutive years",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
     "revenue_policy_change": {
       "flag_number": 40,
       "flag_name": "Revenue Recognition Policy Change",
@@ -323,17 +279,22 @@ Return your response as a valid JSON object with the exact structure shown below
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
+    },
+    "jv_associate_losses": {
+      "flag_number": 51,
+      "flag_name": "JV/Associate Loss Hiding",
+      "category": "Related Party",
+      "severity": "MEDIUM",
+      "rule": "Persistent losses in JVs/associates for 2+ years or significant investment write-downs",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
     }
   }
 }
 
 **DETAILED CHECKING INSTRUCTIONS FOR EACH FLAG:**
-
-**FLAG 1 - Auditor Resignation Mid-Term:**
-- Check the auditor's report and corporate governance section
-- Look for phrases: "casual vacancy", "resigned", "ceased to hold office", "appointed to fill vacancy"
-- A mid-term resignation (not at AGM rotation) is a serious red flag
-- Check if the new auditor was appointed at an EGM or board meeting (not AGM)
 
 **FLAG 2 - Qualified/Adverse/Disclaimer Opinion:**
 - Read the Independent Auditor's Report carefully
@@ -372,7 +333,9 @@ Return your response as a valid JSON object with the exact structure shown below
 **FLAG 16 - Loans to Related Parties:**
 - In the RPT note, look for: loans given, advances, deposits with related parties
 - Check for outstanding balances at year end
-- Material loans to promoter entities, associates, or subsidiaries are red flags
+- Calculate if loans/advances to related parties exceed 5% of revenue from operations OR 5% of profit after tax (PAT)
+- Use the actual numbers from the related party transaction table
+- Flag if either threshold is breached
 
 **FLAG 17 - RP Premium/Non-Arms Length Transactions:**
 - Look for language about "arm's length" pricing in RPT disclosures
@@ -385,21 +348,10 @@ Return your response as a valid JSON object with the exact structure shown below
 - Check if the proportion of revenue from related parties is increasing
 - Growing dependence on group companies for revenue is a concern
 
-**FLAG 19 - Complex Related Party Structure:**
-- Count the number of related parties listed
-- Look for multi-layered structures: subsidiaries of subsidiaries, step-down entities
-- Check for entities in tax havens (Cyprus, Mauritius, Cayman, Singapore, BVI)
-- More than 20+ related entities or entities in unusual jurisdictions is a flag
-
 **FLAG 20 - Loans to Directors:**
 - Specifically search for loans/advances to directors, KMP, or their relatives
 - Check Section 185/186 of Companies Act compliance disclosures
 - Any loan to a director is a serious red flag under Indian law
-
-**FLAG 21 - New Related Parties Added:**
-- Look for newly added related parties during the year
-- Check for new subsidiaries, associates, or joint ventures formed
-- Especially flag if new entities were created just before year-end
 
 **FLAG 25 - Disproportionate Director Salary:**
 - Find director/KMP remuneration details (in Corporate Governance Report or Notes)
@@ -407,22 +359,11 @@ Return your response as a valid JSON object with the exact structure shown below
 - If director pay > 10% of net profit or increased despite declining profits, flag it
 - Check for commission, stock options, and perquisites separately
 
-**FLAG 26 - Company Name Change:**
-- Check if the company changed its name during or shortly before the reporting period
-- Look in the directors' report, corporate information, or cover page
-- Name changes can be used to distract from past issues
-
 **FLAG 27 - Inter-Corporate Deposits (ICDs):**
 - Search for "inter-corporate deposits", "ICDs", "inter corporate loans"
 - Check loans and advances given to group/associate companies
 - Material ICDs to related or group companies are a significant red flag
 - Check the interest rate and repayment terms
-
-**FLAG 28 - Independent Director Exit:**
-- Check for resignations of independent directors during the year
-- Look in the directors' report, corporate governance section
-- Multiple independent directors resigning is very concerning
-- Check if any director resigned citing "personal reasons" or concerns
 
 **FLAG 29 - Audit Committee Issues:**
 - Check audit committee composition - needs minimum 3 members, 2/3 independent
@@ -460,6 +401,12 @@ Return your response as a valid JSON object with the exact structure shown below
 - Flag if significant portion of assets (>30%) are pledged
 - Compare pledged assets to total assets
 
+**FLAG 50 - Bad Debt Provisioning Increasing:**
+- Check Notes to Accounts for provision for doubtful debts / expected credit losses
+- Look for allowance for bad and doubtful debts, write-offs
+- Flag if provisions increased >50% YoY or have been increasing for 2+ consecutive years
+- Increasing bad debt provisions suggest deteriorating receivables quality
+
 **FLAG 40 - Revenue Recognition Policy Change:**
 - Check accounting policies section for changes in revenue recognition
 - Look for "change in accounting policy", "restatement", "Ind AS 115 transition"
@@ -478,6 +425,12 @@ Return your response as a valid JSON object with the exact structure shown below
 - Check for: absence of quantitative targets, excessive use of "challenging", "headwinds"
 - Flag if management avoids discussing specific problems or uses overly defensive language
 - Compare management commentary with actual financial performance
+
+**FLAG 51 - JV/Associate Loss Hiding:**
+- Check for investments in joint ventures and associates in the Notes
+- Look for share of profit/loss from associates and JVs in the P&L
+- Flag if: (a) JVs/associates have reported losses for 2+ consecutive years, (b) significant impairment/write-down of JV/associate investments, or (c) company's share of JV/associate losses exceeds 5% of consolidated profit
+- Persistent losses in JVs/associates suggest potential loss-parking in off-balance-sheet entities
 
 Remember: Return ONLY the JSON object, no other text. Be precise and cite specific page numbers, amounts, or quotes from the report where possible.
 """
@@ -563,7 +516,7 @@ def _fix_truncated_json(json_str: str) -> str:
 
 
 def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None) -> Dict:
-    """Analyze an annual report PDF using Gemini for 26 text-based red flags.
+    """Analyze an annual report PDF using Gemini for 23 text-based red flags.
 
     Args:
         pdf_path: Path to the annual report PDF file

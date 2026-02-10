@@ -1,4 +1,4 @@
-"""16 API-based red flag calculations using FinEdge financial data."""
+"""21 API-based red flag calculations using FinEdge financial data."""
 
 import logging
 from typing import Dict, List, Optional
@@ -17,7 +17,7 @@ def safe_get(data: dict, key: str, default=0) -> float:
         return default
 
 
-def get_latest_years(records: list, n: int = 2) -> list:
+def get_latest_years(records: list, n: int = 3) -> list:
     """Get the latest N years of data, sorted by year descending."""
     sorted_recs = sorted(records, key=lambda x: x.get("year", 0), reverse=True)
     return sorted_recs[:n]
@@ -39,8 +39,13 @@ def fmt_b(val: float) -> str:
     return f"{val:,.0f}"
 
 
-def calculate_api_flags(data: Dict) -> List[Dict]:
-    """Calculate all 16 API-based flags. Returns list of flag results."""
+def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[Dict]:
+    """Calculate all API-based flags. Returns list of flag results.
+
+    Args:
+        data: Financial data from FinEdge API
+        is_financial_sector: If True, skip flags incompatible with banks/NBFCs/financial services
+    """
     pl = data.get("pl_annual", [])
     bs = data.get("bs_annual", [])
     cf = data.get("cf_annual", [])
@@ -52,24 +57,42 @@ def calculate_api_flags(data: Dict) -> List[Dict]:
     bs_years = get_latest_years(bs, 3)
     cf_years = get_latest_years(cf, 3)
 
-    flags = [
-        _check_pat_vs_cfo(pl_years, cf_years),
-        _check_receivables_growth(pl_years, bs_years),
-        _check_inventory_growth(pl_years, bs_years),
-        _check_capex_vs_depreciation(pl_years, cf_years),
-        _check_exceptional_items(pl_years),
-        _check_negative_cfo(cf_years),
-        _check_ccc(pl_years, bs_years),
-        _check_other_income(pl_years),
-        _check_promoter_pledge(sh_declaration),
-        _check_pledge_increasing(sh_declaration),
-        _check_promoter_selling(sh_pattern),
-        _check_debt_equity(bs_years),
-        _check_interest_coverage(pl_years),
-        _check_st_debt(bs_years),
-        _check_intangibles(bs_years),
-        _check_q4_revenue(pl, pl_q),
-    ]
+    flags = []
+
+    # --- Cash Flow Flags ---
+    flags.append(_check_pat_vs_cfo(pl_years, cf_years))                        # #7
+    if not is_financial_sector:
+        flags.append(_check_receivables_growth(pl_years, bs_years))             # #8
+        flags.append(_check_inventory_growth(pl_years, bs_years))               # #9
+    flags.append(_check_exceptional_items(pl_years))                            # #11
+    if not is_financial_sector:
+        flags.append(_check_ccc(pl_years, bs_years))                            # #13
+    flags.append(_check_other_income(pl_years))                                 # #14
+    if not is_financial_sector:
+        flags.append(_check_cfo_ebitda_ratio(pl_years, cf_years))               # #43
+    flags.append(_check_cash_yield(bs_years, cf_years))                         # #46
+    if not is_financial_sector:
+        flags.append(_check_free_cash_vs_obligations(bs_years, cf_years))       # #47
+
+    # --- Promoter Flags ---
+    flags.append(_check_promoter_pledge(sh_declaration))                        # #22
+    flags.append(_check_pledge_increasing(sh_declaration))                      # #23
+    flags.append(_check_promoter_selling(sh_pattern))                           # #24
+
+    # --- Balance Sheet Flags ---
+    if not is_financial_sector:
+        flags.append(_check_debt_equity(bs_years))                              # #32
+        flags.append(_check_interest_coverage(pl_years))                        # #33
+        flags.append(_check_st_debt(bs_years))                                  # #34
+        flags.append(_check_intangibles(bs_years))                              # #38
+        flags.append(_check_cwip_aging(bs_years))                               # #44
+        flags.append(_check_depreciation_trajectory(pl_years, bs_years))        # #45
+        flags.append(_check_implied_interest_rate(bs_years, cf_years))          # #48
+    flags.append(_check_net_worth_trajectory(bs_years))                         # #49
+
+    # --- Revenue Flag ---
+    flags.append(_check_q4_revenue(pl, pl_q))                                  # #39
+
     return flags
 
 
@@ -175,30 +198,6 @@ def _check_inventory_growth(pl: list, bs: list) -> Dict:
             "data": {"cogs_growth": cogs_growth, "inv_growth": inv_growth, "inv_days": inv_days}}
 
 
-def _check_capex_vs_depreciation(pl: list, cf: list) -> Dict:
-    """Flag #10: Capex significantly exceeding depreciation."""
-    flag = {"flag_number": 10, "flag_name": "Capex >> Depreciation",
-            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
-            "rule": "Triggers if capex exceeds depreciation by more than 3x"}
-
-    if len(pl) < 1 or len(cf) < 1:
-        return {**flag, "triggered": False, "reason": "Insufficient data"}
-
-    dep = safe_get(pl[0], "depreciationAndAmortisation")
-    # CF capex is negative (outflow), take absolute value
-    capex = abs(safe_get(cf[0], "purchaseOfFixed&IntangibleAssets"))
-
-    if dep == 0:
-        return {**flag, "triggered": False, "reason": "No depreciation data"}
-
-    ratio = capex / dep if dep > 0 else 0
-    triggered = ratio > 3.0
-
-    return {**flag, "triggered": triggered, "confidence": 65 if triggered else 0,
-            "evidence": f"Capex: {fmt_b(capex)}, Depreciation: {fmt_b(dep)}, Ratio: {ratio:.1f}x",
-            "data": {"capex": capex, "depreciation": dep, "ratio": ratio}}
-
-
 def _check_exceptional_items(pl: list) -> Dict:
     """Flag #11: Material exceptional items affecting profit."""
     flag = {"flag_number": 11, "flag_name": "Exceptional Items Material",
@@ -220,33 +219,6 @@ def _check_exceptional_items(pl: list) -> Dict:
     return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
             "evidence": f"Exceptional items: {fmt_b(exceptional)} ({ratio:.1f}% of PAT {fmt_b(pat)})",
             "data": {"exceptional": exceptional, "pat": pat, "ratio_pct": ratio}}
-
-
-def _check_negative_cfo(cf: list) -> Dict:
-    """Flag #12: Negative operating cash flow."""
-    flag = {"flag_number": 12, "flag_name": "Negative Operating Cash Flow",
-            "category": "Cash Flow", "severity": "CRITICAL", "source": "API",
-            "rule": "Triggers if cash flow from operations (CFO) is negative in the latest year"}
-
-    if len(cf) < 1:
-        return {**flag, "triggered": False, "reason": "Insufficient data"}
-
-    cfo = safe_get(cf[0], "cashFlowsFromOperatingActivities")
-    triggered = cfo < 0
-
-    consecutive_negative = 0
-    for year_data in cf:
-        if safe_get(year_data, "cashFlowsFromOperatingActivities") < 0:
-            consecutive_negative += 1
-        else:
-            break
-
-    conf = 95 if consecutive_negative >= 2 else 80
-
-    return {**flag, "triggered": triggered, "confidence": conf if triggered else 0,
-            "evidence": f"CFO: {fmt_b(cfo)}."
-                        f"{' Negative for ' + str(consecutive_negative) + ' consecutive years!' if consecutive_negative > 1 else ''}",
-            "data": {"cfo": cfo, "consecutive_negative": consecutive_negative}}
 
 
 def _check_ccc(pl: list, bs: list) -> Dict:
@@ -308,6 +280,96 @@ def _check_other_income(pl: list) -> Dict:
                         f"({ratio_rev:.1f}% of revenue, {ratio_pat:.1f}% of PAT)",
             "data": {"other_income": other_income, "ratio_of_revenue": ratio_rev,
                      "ratio_of_pat": ratio_pat}}
+
+
+def _check_cfo_ebitda_ratio(pl: list, cf: list) -> Dict:
+    """Flag #43: 3-year cumulative CFO/EBITDA ratio below 70%."""
+    flag = {"flag_number": 43, "flag_name": "Low CFO to EBITDA Ratio (3Y)",
+            "category": "Cash Flow", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if 3-year cumulative CFO/EBITDA < 70%, suggesting poor earnings-to-cash conversion"}
+
+    if len(pl) < 3 or len(cf) < 3:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 3 years)"}
+
+    cum_cfo = sum(safe_get(cf[i], "cashFlowsFromOperatingActivities") for i in range(3))
+    cum_ebitda = sum(
+        safe_get(pl[i], "profitBeforeTax") + safe_get(pl[i], "financeCosts") + safe_get(pl[i], "depreciationAndAmortisation")
+        for i in range(3)
+    )
+
+    if cum_ebitda <= 0:
+        return {**flag, "triggered": False, "reason": "Negative or zero cumulative EBITDA over 3 years"}
+
+    ratio = cum_cfo / cum_ebitda
+    triggered = ratio < 0.70
+
+    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+            "evidence": f"3Y cumulative CFO: {fmt_b(cum_cfo)}, EBITDA: {fmt_b(cum_ebitda)}, "
+                        f"Ratio: {ratio:.1%}",
+            "data": {"cum_cfo": cum_cfo, "cum_ebitda": cum_ebitda, "ratio": ratio}}
+
+
+def _check_cash_yield(bs: list, cf: list) -> Dict:
+    """Flag #46: Cash yield test - interest received vs cash balance."""
+    flag = {"flag_number": 46, "flag_name": "Low Cash Yield",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if cash yield <5% when cash balance >5% of total assets, suggesting cash may not be real"}
+
+    if len(bs) < 1 or len(cf) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    cash = safe_get(bs[0], "cashAndCashEquivalents")
+    total_assets = safe_get(bs[0], "assets")
+    interest_received = safe_get(cf[0], "interestReceivedClassifiedAsOperating")
+
+    if total_assets <= 0:
+        return {**flag, "triggered": False, "reason": "No asset data"}
+
+    cash_pct_of_assets = cash / total_assets * 100
+
+    if cash_pct_of_assets < 5 or cash <= 0:
+        return {**flag, "triggered": False,
+                "reason": f"Cash ({cash_pct_of_assets:.1f}% of assets) not significant enough to test",
+                "data": {"cash": cash, "cash_pct_of_assets": cash_pct_of_assets}}
+
+    cash_yield = interest_received / cash if cash > 0 else 0
+    triggered = cash_yield < 0.05
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"Cash: {fmt_b(cash)} ({cash_pct_of_assets:.1f}% of assets), "
+                        f"Interest received: {fmt_b(interest_received)}, Yield: {cash_yield:.1%}",
+            "data": {"cash": cash, "interest_received": interest_received,
+                     "cash_yield": cash_yield, "cash_pct_of_assets": cash_pct_of_assets}}
+
+
+def _check_free_cash_vs_obligations(bs: list, cf: list) -> Dict:
+    """Flag #47: Free cash flow vs short-term obligations."""
+    flag = {"flag_number": 47, "flag_name": "Low Free Cash vs Obligations",
+            "category": "Cash Flow", "severity": "LOW", "source": "API",
+            "rule": "Triggers if free cash flow covers <15% of short-term obligations (borrowings + payables)"}
+
+    if len(bs) < 1 or len(cf) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    cfo = safe_get(cf[0], "cashFlowsFromOperatingActivities")
+    capex = abs(safe_get(cf[0], "purchaseOfFixed&IntangibleAssets"))
+    fcf = cfo - capex
+
+    st_debt = safe_get(bs[0], "borrowingsCurrent")
+    payables = safe_get(bs[0], "tradePayablesCurrent")
+    st_obligations = st_debt + payables
+
+    if st_obligations <= 0:
+        return {**flag, "triggered": False, "reason": "No short-term obligations found"}
+
+    coverage = fcf / st_obligations
+    triggered = coverage < 0.15
+
+    return {**flag, "triggered": triggered, "confidence": 65 if triggered else 0,
+            "evidence": f"FCF: {fmt_b(fcf)} (CFO: {fmt_b(cfo)} - Capex: {fmt_b(capex)}), "
+                        f"ST obligations: {fmt_b(st_obligations)}, Coverage: {coverage:.1%}",
+            "data": {"fcf": fcf, "cfo": cfo, "capex": capex,
+                     "st_obligations": st_obligations, "coverage": coverage}}
 
 
 # ---------------------------------------------------------------------------
@@ -525,6 +587,142 @@ def _check_intangibles(bs: list) -> Dict:
                         f"(prev: {pct_prev:.1f}%, change: {growth:+.1f}pp). "
                         f"Value: {fmt_b(total_current)}",
             "data": {"pct_current": pct_current, "pct_prev": pct_prev, "growth_pp": growth}}
+
+
+def _check_cwip_aging(bs: list) -> Dict:
+    """Flag #44: CWIP/Net Block > 30% for 3 consecutive years."""
+    flag = {"flag_number": 44, "flag_name": "CWIP Aging",
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if CWIP/Net Block ratio >30% for 3 consecutive years, suggesting stalled projects"}
+
+    if len(bs) < 3:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 3 years)"}
+
+    ratios = []
+    for i in range(3):
+        cwip = safe_get(bs[i], "capitalWorkInProgress")
+        net_block = safe_get(bs[i], "propertyPlantAndEquipment")
+        if net_block <= 0:
+            ratios.append(0)
+        else:
+            ratios.append(cwip / net_block)
+
+    all_above_30 = all(r > 0.30 for r in ratios)
+    triggered = all_above_30
+
+    return {**flag, "triggered": triggered, "confidence": 75 if triggered else 0,
+            "evidence": f"CWIP/Net Block: {ratios[0]:.1%} (latest), {ratios[1]:.1%} (mid), "
+                        f"{ratios[2]:.1%} (oldest). CWIP: {fmt_b(safe_get(bs[0], 'capitalWorkInProgress'))}",
+            "data": {"ratios": ratios}}
+
+
+def _check_depreciation_trajectory(pl: list, bs: list) -> Dict:
+    """Flag #45: Depreciation rate declining over 3 years."""
+    flag = {"flag_number": 45, "flag_name": "Depreciation Rate Declining",
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if depreciation rate declined consistently over 3 years AND total decline >20%"}
+
+    if len(pl) < 3 or len(bs) < 3:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 3 years)"}
+
+    rates = []
+    for i in range(3):
+        dep = safe_get(pl[i], "depreciationAndAmortisation")
+        ppe = safe_get(bs[i], "propertyPlantAndEquipment")
+        cwip = safe_get(bs[i], "capitalWorkInProgress")
+        base = ppe + cwip
+        if base <= 0:
+            rates.append(0)
+        else:
+            rates.append(dep / base)
+
+    # rates[0] = latest, rates[2] = oldest
+    # Declining means oldest > middle > latest
+    consistently_declining = rates[2] > rates[1] > rates[0] and all(r > 0 for r in rates)
+
+    if rates[2] > 0:
+        total_decline_pct = (rates[2] - rates[0]) / rates[2] * 100
+    else:
+        total_decline_pct = 0
+
+    triggered = consistently_declining and total_decline_pct > 20
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"Dep rate: {rates[0]:.1%} (latest), {rates[1]:.1%} (mid), {rates[2]:.1%} (oldest). "
+                        f"Decline: {total_decline_pct:.1f}%",
+            "data": {"rates": rates, "total_decline_pct": total_decline_pct}}
+
+
+def _check_implied_interest_rate(bs: list, cf: list) -> Dict:
+    """Flag #48: Implied interest rate outside normal range."""
+    flag = {"flag_number": 48, "flag_name": "Abnormal Implied Interest Rate",
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if implied interest rate (interest paid / avg debt) is <4% or >18%"}
+
+    if len(bs) < 2 or len(cf) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years BS + 1 year CF)"}
+
+    interest_paid = abs(safe_get(cf[0], "interestPaidClassifiedAsOperating"))
+
+    debt_current = safe_get(bs[0], "borrowingsNoncurrent") + safe_get(bs[0], "borrowingsCurrent")
+    debt_prev = safe_get(bs[1], "borrowingsNoncurrent") + safe_get(bs[1], "borrowingsCurrent")
+    avg_debt = (debt_current + debt_prev) / 2
+
+    if avg_debt <= 0:
+        return {**flag, "triggered": False, "reason": "No significant debt (debt-free company)"}
+
+    if interest_paid <= 0:
+        return {**flag, "triggered": False, "reason": "No interest paid in cash flow"}
+
+    implied_rate = interest_paid / avg_debt
+    triggered = implied_rate < 0.04 or implied_rate > 0.18
+
+    if implied_rate < 0.04:
+        direction = "unusually low (possible understated debt)"
+    elif implied_rate > 0.18:
+        direction = "unusually high (distressed borrowing)"
+    else:
+        direction = "normal"
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"Interest paid: {fmt_b(interest_paid)}, Avg debt: {fmt_b(avg_debt)}, "
+                        f"Implied rate: {implied_rate:.1%} - {direction}",
+            "data": {"interest_paid": interest_paid, "avg_debt": avg_debt,
+                     "implied_rate": implied_rate}}
+
+
+def _check_net_worth_trajectory(bs: list) -> Dict:
+    """Flag #49: Net worth declining over 2+ years."""
+    flag = {"flag_number": 49, "flag_name": "Net Worth Declining",
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if net worth (total equity) declined for 2+ consecutive years OR >20% over 3 years"}
+
+    if len(bs) < 2:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    equities = [safe_get(bs[i], "totalEquity") for i in range(min(3, len(bs)))]
+
+    # Check consecutive decline (latest < older = declining)
+    declining_years = 0
+    for i in range(len(equities) - 1):
+        if equities[i] < equities[i + 1]:
+            declining_years += 1
+
+    # Check total decline over available period
+    if equities[-1] > 0:
+        total_decline_pct = (equities[-1] - equities[0]) / equities[-1] * 100
+    else:
+        total_decline_pct = 0
+
+    triggered = declining_years >= 2 or (len(equities) >= 3 and total_decline_pct > 20)
+
+    equity_strs = [fmt_b(e) for e in equities]
+
+    return {**flag, "triggered": triggered, "confidence": 75 if triggered else 0,
+            "evidence": f"Net worth: {' -> '.join(equity_strs)} (latest first). "
+                        f"Declining for {declining_years} year(s). Change: {total_decline_pct:+.1f}%",
+            "data": {"equities": equities, "declining_years": declining_years,
+                     "total_decline_pct": total_decline_pct}}
 
 
 # ---------------------------------------------------------------------------

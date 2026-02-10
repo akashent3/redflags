@@ -4,12 +4,12 @@ from typing import Dict, List
 
 # Category weights (must sum to 100)
 CATEGORY_WEIGHTS = {
-    "Auditor": 20,
+    "Auditor": 18,
     "Cash Flow": 18,
-    "Related Party": 15,
+    "Related Party": 14,
     "Promoter": 15,
     "Governance": 12,
-    "Balance Sheet": 10,
+    "Balance Sheet": 13,
     "Revenue": 5,
     "Textual": 5,
 }
@@ -22,21 +22,21 @@ SEVERITY_POINTS = {
     "LOW": 3,
 }
 
-# Maximum possible points per category (used for normalization)
+# Number of flags per category (used for reference, actual count from data)
 MAX_CATEGORY_POINTS = {
-    "Auditor": 6,       # 6 flags
-    "Cash Flow": 8,     # 8 flags
-    "Related Party": 7, # 7 flags
-    "Promoter": 6,      # 6 flags
-    "Governance": 4,    # 4 flags
-    "Balance Sheet": 7, # 7 flags
-    "Revenue": 3,       # 3 flags
-    "Textual": 1,       # 1 flag
+    "Auditor": 5,        # 5 Gemini flags
+    "Cash Flow": 9,      # 9 API flags
+    "Related Party": 6,  # 6 Gemini flags
+    "Promoter": 5,       # 3 API + 2 Gemini flags
+    "Governance": 3,     # 3 Gemini flags
+    "Balance Sheet": 12, # 8 API + 4 Gemini flags
+    "Revenue": 3,        # 1 API + 2 Gemini flags
+    "Textual": 1,        # 1 Gemini flag
 }
 
 
 def calculate_risk_score(all_flags: List[Dict]) -> Dict:
-    """Calculate weighted risk score from all 42 flag results.
+    """Calculate weighted risk score from all flag results.
 
     Returns:
         Dict with overall score (0-100), category scores, risk level, and details.
