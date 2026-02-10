@@ -1,4 +1,8 @@
-"""21 API-based red flag calculations using FinEdge financial data."""
+"""API-based red flag calculations using FinEdge financial data.
+
+Non-banks: 21 API flags using standard field schema.
+Banks/NBFCs: 8 API flags (5 bank-specific + 3 promoter) using bank field schema.
+"""
 
 import logging
 from typing import Dict, List, Optional
@@ -42,9 +46,10 @@ def fmt_b(val: float) -> str:
 def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[Dict]:
     """Calculate all API-based flags. Returns list of flag results.
 
-    Args:
-        data: Financial data from FinEdge API
-        is_financial_sector: If True, skip flags incompatible with banks/NBFCs/financial services
+    Banks use completely different field schemas from FinEdge API, so we run
+    separate flag sets for financial vs non-financial sector companies.
+
+    Non-banks: 21 flags | Banks: 8 flags (5 bank-specific + 3 promoter)
     """
     pl = data.get("pl_annual", [])
     bs = data.get("bs_annual", [])
@@ -59,28 +64,30 @@ def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[D
 
     flags = []
 
-    # --- Cash Flow Flags ---
-    flags.append(_check_pat_vs_cfo(pl_years, cf_years))                        # #7
-    if not is_financial_sector:
+    if is_financial_sector:
+        # ===== BANK / NBFC / FINANCIAL SERVICES =====
+        # Bank PL uses: interestEarned, interestExpended, profitLossBeforeTax,
+        #   profitLossForThePeriod, percentageOfGrossNpa, percentageOfNpa,
+        #   cET1Ratio, additionalTier1Ratio, provisionsForLoanLoss
+        # Bank BS uses: deposits, advances, borrowings, capital, reserves, assets
+        flags.append(_check_gnpa_rising(pl_years))                              # #52
+        flags.append(_check_nnpa_high(pl_years))                                # #53
+        flags.append(_check_nim_compression(pl_years, bs_years))                # #54
+        flags.append(_check_cd_ratio(bs_years))                                 # #55
+        flags.append(_check_capital_adequacy(pl_years))                         # #56
+    else:
+        # ===== NON-FINANCIAL (MANUFACTURING, SERVICES, etc.) =====
+        # Cash Flow Flags
+        flags.append(_check_pat_vs_cfo(pl_years, cf_years))                    # #7
         flags.append(_check_receivables_growth(pl_years, bs_years))             # #8
         flags.append(_check_inventory_growth(pl_years, bs_years))               # #9
-    flags.append(_check_exceptional_items(pl_years))                            # #11
-    if not is_financial_sector:
+        flags.append(_check_exceptional_items(pl_years))                        # #11
         flags.append(_check_ccc(pl_years, bs_years))                            # #13
-    flags.append(_check_other_income(pl_years))                                 # #14
-    if not is_financial_sector:
+        flags.append(_check_other_income(pl_years))                             # #14
         flags.append(_check_cfo_ebitda_ratio(pl_years, cf_years))               # #43
-    flags.append(_check_cash_yield(bs_years, cf_years))                         # #46
-    if not is_financial_sector:
+        flags.append(_check_cash_yield(bs_years, cf_years))                     # #46
         flags.append(_check_free_cash_vs_obligations(bs_years, cf_years))       # #47
-
-    # --- Promoter Flags ---
-    flags.append(_check_promoter_pledge(sh_declaration))                        # #22
-    flags.append(_check_pledge_increasing(sh_declaration))                      # #23
-    flags.append(_check_promoter_selling(sh_pattern))                           # #24
-
-    # --- Balance Sheet Flags ---
-    if not is_financial_sector:
+        # Balance Sheet Flags
         flags.append(_check_debt_equity(bs_years))                              # #32
         flags.append(_check_interest_coverage(pl_years))                        # #33
         flags.append(_check_st_debt(bs_years))                                  # #34
@@ -88,10 +95,14 @@ def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[D
         flags.append(_check_cwip_aging(bs_years))                               # #44
         flags.append(_check_depreciation_trajectory(pl_years, bs_years))        # #45
         flags.append(_check_implied_interest_rate(bs_years, cf_years))          # #48
-    flags.append(_check_net_worth_trajectory(bs_years))                         # #49
+        flags.append(_check_net_worth_trajectory(bs_years))                     # #49
+        # Revenue Flag
+        flags.append(_check_q4_revenue(pl, pl_q))                              # #39
 
-    # --- Revenue Flag ---
-    flags.append(_check_q4_revenue(pl, pl_q))                                  # #39
+    # --- Promoter Flags (universal - use shareholding data, same for all) ---
+    flags.append(_check_promoter_pledge(sh_declaration))                        # #22
+    flags.append(_check_pledge_increasing(sh_declaration))                      # #23
+    flags.append(_check_promoter_selling(sh_pattern))                           # #24
 
     return flags
 
@@ -769,3 +780,179 @@ def _check_q4_revenue(pl_annual: list, pl_quarterly: list) -> Dict:
                         f"Quarters: {[fmt_b(q) for q in q_revs]}",
             "data": {"max_quarter_rev": max_q, "max_pct": max_pct,
                      "quarterly_revs": q_revs}}
+
+
+# ===========================================================================
+# BANK / NBFC / FINANCIAL SERVICES SPECIFIC FLAGS
+# These use bank-specific FinEdge API field names which are completely
+# different from the standard (non-bank) schema.
+# ===========================================================================
+
+def _check_gnpa_rising(pl: list) -> Dict:
+    """Flag #52: Gross NPA % rising YoY or above 3%."""
+    flag = {"flag_number": 52, "flag_name": "Gross NPA Rising",
+            "category": "Balance Sheet", "severity": "CRITICAL", "source": "API",
+            "rule": "Triggers if Gross NPA % increased YoY or exceeds 3% of gross advances"}
+
+    if len(pl) < 2:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years)"}
+
+    gnpa_current = safe_get(pl[0], "percentageOfGrossNpa")
+    gnpa_prev = safe_get(pl[1], "percentageOfGrossNpa")
+
+    if gnpa_current == 0 and gnpa_prev == 0:
+        return {**flag, "triggered": False, "reason": "No GNPA data available"}
+
+    increasing = gnpa_current > gnpa_prev and gnpa_prev > 0
+    above_threshold = gnpa_current > 3.0
+    triggered = increasing or above_threshold
+
+    return {**flag, "triggered": triggered, "confidence": 85 if triggered else 0,
+            "evidence": f"GNPA: {gnpa_current:.2f}% (prev: {gnpa_prev:.2f}%). "
+                        f"{'Increasing YoY. ' if increasing else ''}"
+                        f"{'Above 3% threshold!' if above_threshold else ''}",
+            "data": {"gnpa_current": gnpa_current, "gnpa_prev": gnpa_prev}}
+
+
+def _check_nnpa_high(pl: list) -> Dict:
+    """Flag #53: Net NPA % rising or above 1.5%."""
+    flag = {"flag_number": 53, "flag_name": "Net NPA High",
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if Net NPA % increased YoY or exceeds 1.5%"}
+
+    if len(pl) < 2:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years)"}
+
+    nnpa_current = safe_get(pl[0], "percentageOfNpa")
+    nnpa_prev = safe_get(pl[1], "percentageOfNpa")
+
+    if nnpa_current == 0 and nnpa_prev == 0:
+        return {**flag, "triggered": False, "reason": "No NNPA data available"}
+
+    increasing = nnpa_current > nnpa_prev and nnpa_prev > 0
+    above_threshold = nnpa_current > 1.5
+    triggered = increasing or above_threshold
+
+    return {**flag, "triggered": triggered, "confidence": 85 if triggered else 0,
+            "evidence": f"NNPA: {nnpa_current:.2f}% (prev: {nnpa_prev:.2f}%). "
+                        f"{'Increasing YoY. ' if increasing else ''}"
+                        f"{'Above 1.5% threshold!' if above_threshold else ''}",
+            "data": {"nnpa_current": nnpa_current, "nnpa_prev": nnpa_prev}}
+
+
+def _check_nim_compression(pl: list, bs: list) -> Dict:
+    """Flag #54: Net Interest Margin declining >30bps YoY."""
+    flag = {"flag_number": 54, "flag_name": "NIM Compression",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if Net Interest Margin declined >30 basis points YoY"}
+
+    if len(pl) < 2 or len(bs) < 2:
+        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years)"}
+
+    def calc_nim(pl_data, bs_data):
+        interest_earned = safe_get(pl_data, "interestEarned")
+        interest_expended = safe_get(pl_data, "interestExpended")
+        total_assets = safe_get(bs_data, "assets")
+        if total_assets <= 0:
+            return 0
+        return (interest_earned - interest_expended) / total_assets * 100
+
+    nim_current = calc_nim(pl[0], bs[0])
+    nim_prev = calc_nim(pl[1], bs[1])
+
+    if nim_current == 0 and nim_prev == 0:
+        return {**flag, "triggered": False, "reason": "Cannot calculate NIM"}
+
+    decline_bps = (nim_prev - nim_current) * 100  # in basis points
+    triggered = decline_bps > 30
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"NIM: {nim_current:.2f}% (prev: {nim_prev:.2f}%), "
+                        f"Change: {-decline_bps:+.0f} bps",
+            "data": {"nim_current": nim_current, "nim_prev": nim_prev,
+                     "decline_bps": decline_bps}}
+
+
+def _check_cd_ratio(bs: list) -> Dict:
+    """Flag #55: Credit-to-Deposit ratio abnormal."""
+    flag = {"flag_number": 55, "flag_name": "Credit-Deposit Ratio Abnormal",
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if CD ratio >80% (liquidity risk) or <55% (poor lending efficiency)"}
+
+    if len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    advances = safe_get(bs[0], "advances")
+    deposits = safe_get(bs[0], "deposits")
+
+    if deposits <= 0:
+        return {**flag, "triggered": False, "reason": "No deposit data available"}
+
+    cd_ratio = (advances / deposits) * 100
+    triggered = cd_ratio > 80 or cd_ratio < 55
+
+    if cd_ratio > 80:
+        direction = "High - liquidity risk"
+    elif cd_ratio < 55:
+        direction = "Low - poor lending efficiency"
+    else:
+        direction = "Normal range"
+
+    trend = ""
+    if len(bs) >= 2:
+        prev_adv = safe_get(bs[1], "advances")
+        prev_dep = safe_get(bs[1], "deposits")
+        if prev_dep > 0:
+            prev_cd = (prev_adv / prev_dep) * 100
+            trend = f" (prev: {prev_cd:.1f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"CD ratio: {cd_ratio:.1f}%{trend} - {direction}. "
+                        f"Advances: {fmt_b(advances)}, Deposits: {fmt_b(deposits)}",
+            "data": {"cd_ratio": cd_ratio, "advances": advances, "deposits": deposits}}
+
+
+def _check_capital_adequacy(pl: list) -> Dict:
+    """Flag #56: Capital adequacy ratio near regulatory minimum."""
+    flag = {"flag_number": 56, "flag_name": "Capital Adequacy Low",
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if CET1 <7% or Tier-1 <9.5% or Tier-1 declined >1.5pp YoY"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    cet1 = safe_get(pl[0], "cET1Ratio")
+    at1 = safe_get(pl[0], "additionalTier1Ratio")
+    tier1 = cet1 + at1
+
+    if cet1 == 0:
+        return {**flag, "triggered": False, "reason": "No capital adequacy data available"}
+
+    low_cet1 = cet1 < 7.0
+    low_tier1 = tier1 < 9.5
+
+    declining = False
+    prev_tier1 = 0
+    if len(pl) >= 2:
+        prev_cet1 = safe_get(pl[1], "cET1Ratio")
+        prev_at1 = safe_get(pl[1], "additionalTier1Ratio")
+        prev_tier1 = prev_cet1 + prev_at1
+        if prev_tier1 > 0:
+            declining = (prev_tier1 - tier1) > 1.5
+
+    triggered = low_cet1 or low_tier1 or declining
+
+    evidence = f"CET1: {cet1:.2f}%, AT1: {at1:.2f}%, Tier-1: {tier1:.2f}%"
+    if prev_tier1 > 0:
+        evidence += f" (prev Tier-1: {prev_tier1:.2f}%)"
+    if low_cet1:
+        evidence += " - CET1 below 7% minimum!"
+    if low_tier1:
+        evidence += " - Tier-1 below 9.5%!"
+    if declining:
+        evidence += " - Declining >1.5pp YoY!"
+
+    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+            "evidence": evidence,
+            "data": {"cet1": cet1, "at1": at1, "tier1": tier1,
+                     "prev_tier1": prev_tier1}}

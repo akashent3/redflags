@@ -304,7 +304,7 @@
 <div class="container">
     <div class="header">
         <h1>RedFlag AI</h1>
-        <p>Annual Report Red Flag Analyzer | 44 Flags | 8 Categories</p>
+        <p>Annual Report Red Flag Analyzer | {% if result %}{{ result.risk_score.summary.total_flags_checked }}{% else %}Up to 44{% endif %} Flags | 8 Categories</p>
     </div>
 
     <!-- Upload Form -->
@@ -474,7 +474,7 @@
     {% endif %}
 
     <div class="footer">
-        RedFlag AI Mini App | 44 Red Flags | 8 Categories | FinEdge API + Gemini 2.5 Flash
+        RedFlag AI Mini App | {% if result %}{{ result.risk_score.summary.total_flags_checked }}{% else %}Up to 44{% endif %} Red Flags | 8 Categories | FinEdge API + Gemini 2.5 Flash
     </div>
 </div>
 

@@ -112,7 +112,7 @@ async def analyze(
             pdf_path = tmp.name
         logger.info(f"PDF saved to: {pdf_path}")
 
-        gemini_raw = analyze_pdf_with_gemini(pdf_path)
+        gemini_raw = analyze_pdf_with_gemini(pdf_path, is_financial_sector=is_financial)
         gemini_flags_result = parse_gemini_flags(gemini_raw)
         logger.info(f"Gemini flags: {sum(1 for f in gemini_flags_result if f['triggered'])} triggered "
                     f"out of {len(gemini_flags_result)}")
