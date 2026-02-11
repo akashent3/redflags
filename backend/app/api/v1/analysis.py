@@ -20,7 +20,7 @@ from app.schemas import (
     TaskStatusResponse,
     TaskSubmitResponse,
 )
-from app.tasks.analysis_tasks import analyze_report_task
+from app.tasks.analysis_tasks import analyze_report_task, analyze_company_by_symbol_task
 from app.utils import get_current_active_user
 
 logger = logging.getLogger(__name__)
@@ -347,4 +347,63 @@ async def get_red_flags(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve red flags: {str(e)}",
+        )
+
+
+@router.post(
+    "/analyze-symbol/{symbol}",
+    response_model=TaskSubmitResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Analyze company by symbol (auto-fetch from NSE)",
+    description="Automatically fetch latest annual report from NSE and analyze. Returns task ID.",
+)
+async def analyze_company_by_symbol(
+    symbol: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Analyze a company by NSE symbol - automatically fetches latest annual report.
+
+    This endpoint will:
+    1. Fetch latest annual report from NSE India
+    2. Download PDF and upload to R2 storage
+    3. Fetch financial data from FinEdge API
+    4. Create/update company record in database
+    5. Trigger analysis via Celery
+    6. Return task ID for status tracking
+
+    **Path Parameters:**
+    - `symbol`: NSE symbol (e.g., "RELIANCE", "TCS", "INFY")
+
+    **Returns:**
+    - Task ID for tracking analysis progress
+
+    **Use Cases:**
+    - User selects company from search dropdown
+    - App automatically analyzes latest annual report
+
+    **Example:**
+    - POST /api/v1/analysis/analyze-symbol/RELIANCE
+    """
+    try:
+        logger.info(f"Submitting analysis task for company symbol: {symbol}")
+
+        # Submit to Celery
+        task = analyze_company_by_symbol_task.delay(symbol, str(current_user.id))
+
+        logger.info(f"Analysis task submitted for {symbol}: {task.id}")
+
+        return TaskSubmitResponse(
+            task_id=task.id,
+            report_id=None,
+            status="PENDING",
+            message=f"Analysis task submitted for {symbol}. Fetching annual report from NSE...",
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to submit analysis task for {symbol}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit analysis task: {str(e)}",
         )

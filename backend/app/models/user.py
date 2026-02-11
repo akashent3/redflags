@@ -37,7 +37,7 @@ class User(Base):
     )
     subscription_active = Column(Boolean, default=True, nullable=False)
     reports_used_this_month = Column(Integer, default=0, nullable=False)
-    reports_limit = Column(Integer, default=3, nullable=False)  # Monthly limit
+    reports_limit = Column(Integer, default=999999, nullable=False)  # Unlimited for now
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -60,7 +60,8 @@ class User(Base):
     @property
     def can_analyze(self) -> bool:
         """Check if user can perform more analyses this month."""
-        return self.reports_used_this_month < self.reports_limit
+        # Unlimited for now - payment gateway disabled
+        return True
 
     def increment_usage(self):
         """Increment monthly report usage counter."""
