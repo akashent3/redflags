@@ -990,7 +990,7 @@ def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None, is_financial_sec
     pdf_file = genai.upload_file(pdf_path, mime_type="application/pdf")
     logger.info(f"PDF uploaded successfully: {pdf_file.name}")
 
-    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     prompt = ANALYSIS_PROMPT_BANK if is_financial_sector else ANALYSIS_PROMPT
     logger.info(f"Sending analysis request to Gemini ({'bank' if is_financial_sector else 'non-bank'} prompt)...")
