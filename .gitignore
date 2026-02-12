@@ -29,6 +29,11 @@ out/
 
 # Data files (downloaded PDFs)
 backend/data/pdfs/
+mini-test-app/backend/uploads/
+mini_app/doclling/*.pdf
+test_pipeline/*.pdf
+**/*.pdf
+**/*.json
 
 # IDE
 .vscode/
