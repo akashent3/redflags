@@ -34,6 +34,7 @@ class RedFlagResponse(BaseModel):
     id: UUID
     flag_number: int = Field(..., ge=1, le=54, description="Flag number (1-54)")
     flag_name: str = Field(..., description="Short name of the red flag")
+    flag_description: Optional[str] = Field(None, description="Detailed description of the flag")
     category: str = Field(..., description="Category (Auditor, Cash Flow, etc.)")
     severity: str = Field(..., description="Severity level (CRITICAL/HIGH/MEDIUM/LOW)")
     is_triggered: bool = Field(..., description="Whether this flag was triggered")

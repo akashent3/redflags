@@ -9,17 +9,19 @@
 import { AlertTriangle, AlertCircle, Info, XCircle, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { hasEducationalContent } from '@/lib/utils/flagHelpers';
 
 export interface RedFlag {
-  id: number;
-  flag_id: string;
-  name: string;
+  id: string;  // ✅ UUID from backend
+  flag_number: number;
+  flag_name: string;  // ✅ Matches backend
+  flag_description?: string;  // ✅ Optional from backend
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   category: string;
-  description: string;
-  evidence: string;
-  triggered: boolean;
+  is_triggered: boolean;  // ✅ Matches backend
+  confidence_score?: number;
+  evidence_text?: string;  // ✅ Matches backend
+  page_references?: number[];
+  detection_method?: string;
 }
 
 interface RedFlagCardProps {
@@ -88,7 +90,7 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 mb-2">
               <h3 className="font-semibold text-gray-900 text-sm md:text-base">
-                {flag.name}
+                #{flag.flag_number} - {flag.flag_name}
               </h3>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`px-2 py-1 rounded text-xs font-medium ${config.badge}`}>
@@ -99,9 +101,11 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
                 </span>
               </div>
             </div>
-            <p className="text-sm text-gray-700 line-clamp-2">
-              {flag.description}
-            </p>
+            {flag.flag_description && (
+              <p className="text-sm text-gray-700 line-clamp-2">
+                {flag.flag_description}
+              </p>
+            )}
           </div>
           <div className={`text-gray-400 flex-shrink-0 ml-2 transform transition-transform ${
             isExpanded ? 'rotate-180' : ''
@@ -117,14 +121,16 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
       {isExpanded && (
         <div className="p-4 bg-white border-t border-gray-200">
           {/* Description */}
-          <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2">
-              What This Means
-            </h4>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {flag.description}
-            </p>
-          </div>
+          {flag.flag_description && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                What This Means
+              </h4>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {flag.flag_description}
+              </p>
+            </div>
+          )}
 
           {/* Evidence */}
           <div className="mb-4">
@@ -133,10 +139,42 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
             </h4>
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {flag.evidence || 'No specific evidence provided.'}
+                {flag.evidence_text || 'No specific evidence provided.'}
               </p>
             </div>
           </div>
+
+          {/* Confidence Score */}
+          {flag.confidence_score !== undefined && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                Confidence Score
+              </h4>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full"
+                    style={{ width: `${flag.confidence_score}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-gray-900">
+                  {flag.confidence_score}%
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Page References */}
+          {flag.page_references && flag.page_references.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                Page References
+              </h4>
+              <p className="text-sm text-gray-600">
+                Pages: {flag.page_references.join(', ')}
+              </p>
+            </div>
+          )}
 
           {/* Impact Level */}
           <div className="flex items-start gap-2 bg-gray-50 rounded-lg p-3">
@@ -154,25 +192,12 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-4 flex items-center gap-3">
-            {hasEducationalContent(flag.id) ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/report/${reportId}/flag/${flag.id}`);
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                View Full Details
-                <ExternalLink className="h-4 w-4" />
-              </button>
-            ) : (
-              <span className="text-sm text-gray-500 italic">
-                Detailed educational content coming soon for this flag
-              </span>
-            )}
-          </div>
+          {/* Detection Method */}
+          {flag.detection_method && (
+            <div className="mt-4 text-xs text-gray-500">
+              Detection method: <span className="font-medium">{flag.detection_method}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

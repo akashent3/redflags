@@ -15,8 +15,6 @@ import SpiderChart, { CategoryScore } from '@/components/analysis/SpiderChart';
 import CategoryBreakdown, { CategoryData } from '@/components/analysis/CategoryBreakdown';
 import RedFlagsList from '@/components/analysis/RedFlagsList';
 import { RedFlag } from '@/components/analysis/RedFlagCard';
-import RelatedPartyNetwork from '@/components/analysis/RelatedPartyNetwork';
-import { transformRPTToNetwork } from '@/lib/utils/networkTransformer';
 import {
   Download,
   Share2,
@@ -26,8 +24,8 @@ import {
   Calendar,
   Building2,
   ArrowLeft,
-  Network,
   Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface ReportPageProps {
@@ -65,13 +63,14 @@ interface CompanyData {
 export default function ReportPage({ params }: ReportPageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'flags' | 'network' | 'details'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'flags' | 'all-checks' | 'details'>('overview');
   
   // State for real data
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [report, setReport] = useState<ReportData | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [flags, setFlags] = useState<RedFlag[]>([]);
+  const [allFlags, setAllFlags] = useState<RedFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,21 +83,25 @@ export default function ReportPage({ params }: ReportPageProps) {
       setLoading(true);
       setError(null);
 
-      // The ID in the URL is report_id - fetch analysis by report_id
-      const analysisResponse = await api.get<AnalysisData>(`/analysis/report/${resolvedParams.id}`);
+      // The URL param is ANALYSIS_ID, not report_id
+      const analysisResponse = await api.get<AnalysisData>(`/analysis/${resolvedParams.id}`);
       setAnalysis(analysisResponse.data);
 
-      // Fetch report details
-      const reportResponse = await api.get<ReportData>(`/reports/${resolvedParams.id}`);
+      // Get report_id from the analysis response
+      const reportResponse = await api.get<ReportData>(`/reports/${analysisResponse.data.report_id}`);
       setReport(reportResponse.data);
 
-      // Fetch company details
+      // Get company from report
       const companyResponse = await api.get<CompanyData>(`/companies/${reportResponse.data.company_id}`);
       setCompany(companyResponse.data);
 
-      // Fetch red flags (use analysis_id, not report_id)
-      const flagsResponse = await api.get(`/analysis/${analysisResponse.data.id}/flags?triggered_only=true`);
+      // Fetch triggered flags
+      const flagsResponse = await api.get(`/analysis/${resolvedParams.id}/flags?triggered_only=true`);
       setFlags(flagsResponse.data.flags || []);
+
+      // Fetch all flags (for "All Checks" tab)
+      const allFlagsResponse = await api.get(`/analysis/${resolvedParams.id}/flags`);
+      setAllFlags(allFlagsResponse.data.flags || []);
 
     } catch (err: any) {
       console.error('Failed to fetch report data:', err);
@@ -132,12 +135,12 @@ export default function ReportPage({ params }: ReportPageProps) {
     if (!analysis?.category_scores || !flags) return [];
 
     return Object.entries(analysis.category_scores).map(([category, score]) => {
-      const categoryFlags = flags.filter(f => f.category === category && f.triggered);
+      const categoryFlags = flags.filter(f => f.category === category && f.is_triggered);
       return {
         name: category,
         score: score as number,
         flagsCount: categoryFlags.length,
-        weight: 10, // Default weight
+        weight: 10,
       };
     }).sort((a, b) => b.score - a.score);
   };
@@ -160,7 +163,7 @@ export default function ReportPage({ params }: ReportPageProps) {
           <p className="font-medium">Error loading report</p>
           <p className="text-sm mt-1">{error || 'Report data not found'}</p>
           <Button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/dashboard')}
             variant="outline"
             size="sm"
             className="mt-4"
@@ -173,7 +176,7 @@ export default function ReportPage({ params }: ReportPageProps) {
     );
   }
 
-  const triggeredFlags = flags.filter(f => f.triggered);
+  const triggeredFlags = flags.filter(f => f.is_triggered);
   const criticalFlags = triggeredFlags.filter(f => f.severity === 'CRITICAL');
   const categoryScores = getCategoryScores();
   const categoryDetails = getCategoryDetails();
@@ -183,7 +186,7 @@ export default function ReportPage({ params }: ReportPageProps) {
       {/* Header */}
       <div>
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/dashboard')}
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -207,7 +210,7 @@ export default function ReportPage({ params }: ReportPageProps) {
               </span>
               <span className="flex items-center gap-1">
                 <AlertTriangle className="h-4 w-4" />
-                {triggeredFlags.length} red flags detected
+                {triggeredFlags.length} of {allFlags.length} flags triggered
               </span>
             </div>
           </div>
@@ -247,6 +250,16 @@ export default function ReportPage({ params }: ReportPageProps) {
             }`}
           >
             Red Flags ({triggeredFlags.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('all-checks')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'all-checks'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+            }`}
+          >
+            All Checks ({allFlags.length})
           </button>
           <button
             onClick={() => setActiveTab('details')}
@@ -316,7 +329,7 @@ export default function ReportPage({ params }: ReportPageProps) {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">
-                      {triggeredFlags.length} Total Red Flags
+                      {triggeredFlags.length} of {allFlags.length} Flags Triggered
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       Across {categoryScores.length} categories analyzed
@@ -373,9 +386,64 @@ export default function ReportPage({ params }: ReportPageProps) {
       {activeTab === 'flags' && (
         <div className="bg-white rounded-lg shadow border border-gray-200 p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">
-            All Red Flags ({triggeredFlags.length} triggered)
+            Triggered Red Flags ({triggeredFlags.length} of {allFlags.length})
           </h2>
-          <RedFlagsList flags={triggeredFlags} showFilters={true} />
+          {triggeredFlags.length > 0 ? (
+            <RedFlagsList flags={triggeredFlags} showFilters={true} />
+          ) : (
+            <div className="text-center py-12">
+              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Red Flags Detected
+              </h3>
+              <p className="text-gray-600">
+                All {allFlags.length} checks passed successfully for this company.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* All Checks Tab */}
+      {activeTab === 'all-checks' && (
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900">
+              All Red Flag Checks ({allFlags.length} total)
+            </h2>
+            <p className="text-sm text-gray-600 mt-2">
+              Showing all {allFlags.length} checks. {triggeredFlags.length} flags were triggered for this company.
+            </p>
+          </div>
+          
+          {/* Group by category */}
+          {categoryScores.map((cat) => {
+            const categoryFlags = allFlags.filter(f => f.category === cat.category);
+            const triggeredCount = categoryFlags.filter(f => f.is_triggered).length;
+            
+            return (
+              <div key={cat.category} className="mb-8 last:mb-0">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {cat.category}
+                  </h3>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-gray-600">
+                      {triggeredCount} / {categoryFlags.length} triggered
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-medium">
+                      Risk Score: {cat.score}/100
+                    </span>
+                  </div>
+                </div>
+                
+                <RedFlagsList 
+                  flags={categoryFlags} 
+                  showFilters={false}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -197,14 +197,15 @@ export default function AnalyzePage() {
         console.log('✓ Analysis already exists! Redirecting immediately...');
         
         // Get report_id from response
-        const reportId = response.data.report_id;
-        
-        if (!reportId) {
-          throw new Error('No report ID returned from completed analysis');
+        // Get analysis_id from response
+        const analysisId = response.data.analysis_id;  // ✅ CORRECT
+
+        if (!analysisId) {
+          throw new Error('No analysis ID returned from completed analysis');
         }
-        
+
         // Redirect immediately to report page (< 1 second)
-        router.push(`/report/${reportId}`);
+        router.push(`/report/${analysisId}`);  // ✅ CORRECT
         return;
       }
 
@@ -218,16 +219,17 @@ export default function AnalyzePage() {
       console.log('⏳ New analysis started. Polling for completion...');
 
       // Poll for status (new analysis)
-      const result = await pollTaskStatus(taskId);
+      // Poll for status (new analysis)
+    const result = await pollTaskStatus(taskId);
 
-      // Redirect to report page when complete
-      const reportId = result.report_id;
-      
-      if (!reportId) {
-        throw new Error('No report ID returned from analysis result');
-      }
-      
-      router.push(`/report/${reportId}`);
+    // Redirect to report page when complete
+    const analysisId = result.result?.analysis_id;  // ✅ CORRECT - Get from result object
+
+    if (!analysisId) {
+      throw new Error('No analysis ID returned from analysis result');
+    }
+
+    router.push(`/report/${analysisId}`);  // ✅ CORRECT
     } catch (err: any) {
       console.error('Analysis failed:', err);
       setError(
