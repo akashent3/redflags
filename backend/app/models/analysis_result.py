@@ -47,6 +47,12 @@ class AnalysisResult(Base):
     summary_text = Column(Text, nullable=True)  # AI-generated executive summary
     key_concerns = Column(JSONB, nullable=True, default=[])  # Array of top 3-5 concerns
 
+    
+    # ADD THESE TWO NEW FIELDS:
+    failed_checks_count = Column(Integer, default=0, nullable=False)  # Number of validation checks that failed
+    failed_checks_details = Column(JSONB, nullable=True, default={})  # Details of failed validation checks
+
+
     # Processing Details
     analysis_version = Column(String(20), default="1.0", nullable=False)
     processing_time_seconds = Column(Integer, nullable=True)

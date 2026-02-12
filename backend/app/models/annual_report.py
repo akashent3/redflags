@@ -20,7 +20,7 @@ class AnnualReport(Base):
     company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # Report Details
-    fiscal_year = Column(Integer, nullable=False)  # e.g., 2023 for FY2023-24
+    fiscal_year = Column(String(20), nullable=False)  # e.g., "2024-2025"  # e.g., 2023 for FY2023-24
     filing_date = Column(DateTime(timezone=True), nullable=True)
 
     # PDF Metadata
@@ -59,5 +59,15 @@ class AnnualReport(Base):
 
     @property
     def fiscal_year_display(self) -> str:
-        """Return fiscal year in FY2023-24 format."""
-        return f"FY{self.fiscal_year}-{str(self.fiscal_year + 1)[-2:]}"
+        # Handle both string ("2024-2025") and integer (2024) formats
+        if isinstance(self.fiscal_year, str):
+            # Already in display format
+            if "-" in self.fiscal_year:
+                return f"FY {self.fiscal_year}"
+            else:
+                # Single year as string, convert to range
+                year = int(self.fiscal_year)
+                return f"FY {year}-{year + 1}"
+        else:
+            # Integer format
+            return f"FY {self.fiscal_year}-{self.fiscal_year + 1}"

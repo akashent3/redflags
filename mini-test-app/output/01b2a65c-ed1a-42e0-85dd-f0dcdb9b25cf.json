@@ -1,0 +1,1547 @@
+{
+  "company": {
+    "name": "Reliance industries",
+    "analysis_date": "2026-02-08T14:06:40.901461"
+  },
+  "annual_reports": [
+    {
+      "fiscal_year": "2023",
+      "file_name": "RELIANCE_AR_2023.pdf"
+    },
+    {
+      "fiscal_year": "2024",
+      "file_name": "RELIANCE_AR_2024.pdf"
+    },
+    {
+      "fiscal_year": "2025",
+      "file_name": "RELIANCE_AR_2025.pdf"
+    }
+  ],
+  "analysis_result": {
+    "risk_score": 0,
+    "risk_level": "LOW",
+    "category_scores": {
+      "auditor": 0,
+      "cash_flow": 0,
+      "related_party": 0,
+      "promoter": 0,
+      "governance": 0,
+      "balance_sheet": 0,
+      "revenue": 0,
+      "textual": 0
+    },
+    "flags_triggered_count": 24,
+    "analyzed_at": "2026-02-08T14:06:40.901474"
+  },
+  "red_flags": [
+    {
+      "flag_number": 1,
+      "flag_name": "Flag 1",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 2,
+      "flag_name": "Qualified/Adverse Opinion",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "In our opinion and to the best of our information and according to the explanations given to us, and based on the consideration of reports of the other auditors on separate / consolidated financial statements / financial information of the subsidiaries, associates and joint ventures referred to in the Other Matters section below, the aforesaid Consolidated Financial Statements give the information required by the Companies Act, 2013 (“the Act”) in the manner so required and give a true and fair view in conformity with the Indian Accounting Standards prescribed under Section 133 of the Act read with the Companies (Indian Accounting Standards) Rules, 2015, as amended (‘Ind AS’), and other accounting principles generally accepted in India, of the consolidated state of affairs of the Group as at 31st March, 2023, and their consolidated profit, their consolidated total comprehensive income, their consolidated cash flows and their consolidated changes in equity for the year ended on that date."
+    },
+    {
+      "flag_number": 2,
+      "flag_name": "Qualified/adverse opinion",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Independent Auditor's Report, Page 130, Opinion: 'unmodified opinion'"
+    },
+    {
+      "flag_number": 2,
+      "flag_name": "Qualified/Adverse Opinion",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "In our opinion and to the best of our information and according to the explanations given to us, and based on the consideration of reports of the other auditors on separate / consolidated financial statements / financial information of the subsidiaries, associates and joint ventures referred to in the Other Matters section below, the aforesaid Consolidated Financial Statements give the information required by the Companies Act, 2013 (“the Act”) in the manner so required and give a true and fair view in conformity with the Indian Accounting Standards prescribed under Section 133 of the Act...",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 3,
+      "flag_name": "Disclaimer of Opinion",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "In our opinion and to the best of our information and according to the explanations given to us, and based on the consideration of reports of the other auditors on separate / consolidated financial statements / financial information of the subsidiaries, associates and joint ventures referred to in the Other Matters section below, the aforesaid Consolidated Financial Statements give the information required by the Companies Act, 2013 (“the Act”) in the manner so required and give a true and fair view in conformity with the Indian Accounting Standards prescribed under Section 133 of the Act read with the Companies (Indian Accounting Standards) Rules, 2015, as amended (‘Ind AS’), and other accounting principles generally accepted in India, of the consolidated state of affairs of the Group as at 31st March, 2023, and their consolidated profit, their consolidated total comprehensive income, their consolidated cash flows and their consolidated changes in equity for the year ended on that date."
+    },
+    {
+      "flag_number": 3,
+      "flag_name": "Disclaimer of opinion",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Independent Auditor's Report, Page 130, Opinion: 'unmodified opinion'"
+    },
+    {
+      "flag_number": 3,
+      "flag_name": "Disclaimer of Opinion",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "In our opinion and to the best of our information and according to the explanations given to us, and based on the consideration of reports of the other auditors on separate / consolidated financial statements / financial information of the subsidiaries, associates and joint ventures referred to in the Other Matters section below, the aforesaid Consolidated Financial Statements give the information required by the Companies Act, 2013 (“the Act”) in the manner so required and give a true and fair view in conformity with the Indian Accounting Standards prescribed under Section 133 of the Act...",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 4,
+      "flag_name": "Going Concern Warning",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "If we conclude that a material uncertainty exists, we are required to draw attention in our auditor’s report to the related disclosures in the Consolidated Financial Statements or, if such disclosures are inadequate, to modify our opinion. Our conclusion on the Consolidated Financial Statements is not modified in respect of this matter."
+    },
+    {
+      "flag_number": 4,
+      "flag_name": "Going concern warning",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Independent Auditor's Report, Page 128, Opinion section, states: 'However, future events or conditions may cause the Group and its associates and joint ventures to cease to continue as a going concern.' This is a standard disclosure, not a specific warning of material uncertainty."
+    },
+    {
+      "flag_number": 4,
+      "flag_name": "Going Concern Warning",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "Conclude on the appropriateness of management’s use of the going concern basis of accounting and, based on the audit evidence obtained, whether a material uncertainty exists related to events or conditions that may cast significant doubt on the ability of the Group and its associates and joint ventures to continue as a going concern. If we conclude that a material uncertainty exists, we are required to draw attention in our auditor’s report to the related disclosures in the Consolidated Financial Statements or, if such disclosures are inadequate, to modify our opinion. Our conclusions are based on the audit evidence obtained up to the date of our auditor’s report. However, future events or conditions may cause the Group and its associates and joint ventures to cease to continue as a going concern.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 5,
+      "flag_name": "Emphasis of Matter",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "The report has an 'Other Matters' section, but it does not contain an 'Emphasis of Matter' paragraph as per auditing standards. The opinion is unmodified."
+    },
+    {
+      "flag_number": 5,
+      "flag_name": "Emphasis of matter",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Independent Auditor's Report, Page 128, 'Other Matters' section, lists several points about financial statements of subsidiaries, associates, and joint ventures, but it is not an 'Emphasis of Matter' section."
+    },
+    {
+      "flag_number": 5,
+      "flag_name": "Emphasis of Matter",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "Key audit matters are those matters that, in our professional judgment, were of most significance in our audit of the Consolidated Financial Statements of the current period. These matters were addressed in the context of our audit of the Consolidated Financial Statements as a whole, and in forming our opinion thereon, and we do not provide a separate opinion on these matters.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 6,
+      "flag_name": "High Audit Fees",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Audit fees of 77 crore against a revenue of 9,74,864 crore and net profit of 74,088 crore is very low (0.0079% of revenue, 0.10% of net profit), not indicating high fees.",
+      "extracted_data": {
+        "audit_fees": 77,
+        "revenue": 974864,
+        "net_profit": 74088
+      }
+    },
+    {
+      "flag_number": 6,
+      "flag_name": "High audit fees",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Audit fees (78.65 crores) are 0.00786% of revenue (10,00,122 crores), which is below the 1% threshold.",
+      "extracted_data": {
+        "audit_fees": 78.65,
+        "revenue": 1000122
+      }
+    },
+    {
+      "flag_number": 6,
+      "flag_name": "High Audit Fees",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Fees as Auditors: 37 (Crores ₹)",
+      "extracted_data": {
+        "audit_fees": 3700,
+        "revenue": 1071174
+      }
+    },
+    {
+      "flag_number": 7,
+      "flag_name": "Auditor Resignation",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "No mention of auditor resignation in the Independent Auditor's Report or Board's Report."
+    },
+    {
+      "flag_number": 7,
+      "flag_name": "Auditor resignation",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Corporate Governance Report, Page 88, (xviii) 'There has been no resignation of the statutory auditors of the Company during the year.'"
+    },
+    {
+      "flag_number": 7,
+      "flag_name": "Auditor Resignation",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Deloitte Haskins & Sells LLP, Chartered Accountants and Chaturvedi & Shah LLP, Chartered Accountants, were appointed as the Auditors of the Company for a term of 5 (five) consecutive years, at the 45th AGM (Post-IPO) held on August 29, 2022. The Auditors have confirmed that they are not disqualified from continuing as the Auditors of the Company.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 8,
+      "flag_name": "Auditor Change",
+      "category": "Auditor",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "The comparative financial information of the Group for the year ended 31st March, 2022, prepared in accordance with Ind AS, has been audited by the predecessor auditors."
+    },
+    {
+      "flag_number": 8,
+      "flag_name": "Auditor changed",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Corporate Governance Report, Page 74, 'Auditors and Auditors' Report' states 'Deloitte Haskins & Sells LLP, Chartered Accountants and Chaturvedi & Shah LLP, Chartered Accountants, were appointed as the Auditors of the Company for a term of 5 (five) consecutive years, at the 45th Annual General Meeting (Post-IPO) held on August 29, 2022.' This indicates no change for FY24."
+    },
+    {
+      "flag_number": 8,
+      "flag_name": "Auditor Not Reappointed",
+      "category": "Auditor",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Deloitte Haskins & Sells LLP, Chartered Accountants and Chaturvedi & Shah LLP, Chartered Accountants, were appointed as the Auditors of the Company for a term of 5 (five) consecutive years, at the 45th AGM (Post-IPO) held on August 29, 2022. The Auditors have confirmed that they are not disqualified from continuing as the Auditors of the Company.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 9,
+      "flag_name": "Flag 9",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 10,
+      "flag_name": "Negative Free Cash Flow (FCF)",
+      "category": "Cashflow",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Calculated FCF = CFO - Capex = 1,15,032 - 1,40,988 = (25,956) crore. The FCF is negative.",
+      "extracted_data": {
+        "cfo": 115032,
+        "capex": 140988,
+        "free_cash_flow": -25956
+      }
+    },
+    {
+      "flag_number": 10,
+      "flag_name": "Negative FCF",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Free cash flow is 5,905 crores, which is positive.",
+      "extracted_data": {
+        "free_cash_flow": 5905
+      }
+    },
+    {
+      "flag_number": 10,
+      "flag_name": "Negative FCF",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Net Cash Flow from Operating Activities: 1,78,703 (Crores ₹); Expenditure for Property, Plant and Equipment, Spectrum and Other Intangible Assets: (1,39,967) (Crores ₹)",
+      "extracted_data": {
+        "cfo": 178703,
+        "capex": 139967,
+        "free_cash_flow": 38736
+      }
+    },
+    {
+      "flag_number": 11,
+      "flag_name": "Flag 11",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 12,
+      "flag_name": "Significant Increase in Working Capital",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "Working capital (Current Assets - Current Liabilities) for FY2022-23 is 4,25,296 - 3,95,743 = 29,553 crore. This is a positive value and not unusually high or low in absolute terms. The flag is about 'significant increase' which implies trend analysis, but the instruction is 'DON'T require trend analysis'.",
+      "extracted_data": {
+        "current_assets": 425296,
+        "current_liabilities": 395743,
+        "working_capital": 29553
+      }
+    },
+    {
+      "flag_number": 12,
+      "flag_name": "Working capital issues",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Current assets (4,70,100 crores) are greater than current liabilities (3,97,367 crores).",
+      "extracted_data": {
+        "current_assets": 470100,
+        "current_liabilities": 397367
+      }
+    },
+    {
+      "flag_number": 12,
+      "flag_name": "Working Capital Issues",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Total Current Assets: 4,99,270 (Crores ₹); Total Current Liabilities: 4,53,737 (Crores ₹)",
+      "extracted_data": {
+        "current_assets": 499270,
+        "current_liabilities": 453737
+      }
+    },
+    {
+      "flag_number": 13,
+      "flag_name": "Flag 13",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 14,
+      "flag_name": "High Inventory Days",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Inventory days calculated as (Inventory / Cost of Goods Sold) * 365 = (1,40,008 / 5,88,483) * 365 = 86.8 days. This is a reasonable number for an industrial conglomerate.",
+      "extracted_data": {
+        "inventory": 140008,
+        "cost_of_goods_sold": 588483,
+        "inventory_days": 86.8
+      }
+    },
+    {
+      "flag_number": 14,
+      "flag_name": "Inventory issues",
+      "category": "Cashflow",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Inventory (1,52,770 crores) is 32.49% of current assets (4,70,100 crores), which exceeds the 25% threshold.",
+      "extracted_data": {
+        "inventory": 152770,
+        "current_assets": 470100
+      }
+    },
+    {
+      "flag_number": 14,
+      "flag_name": "Inventory Issues",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "No specific red flag for inventory issues found in the management discussion or auditor's report.",
+      "extracted_data": {
+        "inventory": 146062
+      }
+    },
+    {
+      "flag_number": 15,
+      "flag_name": "Flag 15",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 16,
+      "flag_name": "High Capex to CFO Ratio",
+      "category": "Cashflow",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Capex to CFO ratio = 1,40,988 / 1,15,032 = 1.225. A ratio greater than 1 indicates that operating cash flow is not sufficient to cover capital expenditure.",
+      "extracted_data": {
+        "capex": 140988,
+        "cfo": 115032,
+        "capex_to_cfo_ratio": 1.225
+      }
+    },
+    {
+      "flag_number": 16,
+      "flag_name": "Capex issues",
+      "category": "Cashflow",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Capex (1,52,883 crores) is 15.28% of revenue (10,00,122 crores), which exceeds the 10% threshold.",
+      "extracted_data": {
+        "capex": 152883,
+        "revenue": 1000122
+      }
+    },
+    {
+      "flag_number": 16,
+      "flag_name": "Capex Issues",
+      "category": "Cashflow",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Capital expenditure for the financial year stood at J 1,31,107 crore (US$ 15.3 billion), adequately covered by cash profits.",
+      "extracted_data": {
+        "capex": 139967,
+        "revenue": 1071174
+      }
+    },
+    {
+      "flag_number": 17,
+      "flag_name": "High Related Party Transactions (RPT)",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Total RPT amount of 36,746 crore represents 3.76% of total revenue (9,74,864 crore), which is not considered high (typically >5-10% is a concern).",
+      "extracted_data": {
+        "total_rpt_amount": 36746,
+        "revenue": 974864
+      }
+    },
+    {
+      "flag_number": 17,
+      "flag_name": "High RPT",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Total RPT amount (35,460 crores) is 3.54% of revenue (10,00,122 crores), which is below the 10% threshold.",
+      "extracted_data": {
+        "total_rpt_amount": 35460,
+        "revenue": 1000122
+      }
+    },
+    {
+      "flag_number": 17,
+      "flag_name": "High RPT",
+      "category": "RPT",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "In accordance with Regulation 23 of the Listing Regulations, approval of the members is sought for related party transactions which in a financial year, exceed the lower of (i) C 1,000 crore; and (ii) 10% of the annual consolidated turnover of the Company as per the last audited financial statements of the Company. The total RPT amount for FY2025 is 28,045 Crores, which exceeds the 1,000 crore threshold.",
+      "extracted_data": {
+        "total_rpt_amount": 28045,
+        "revenue": 1071174
+      }
+    },
+    {
+      "flag_number": 18,
+      "flag_name": "Flag 18",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 19,
+      "flag_name": "Related Party Loans/Advances",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The 'Net Loans and Advances, Deposits Given / (Returned)' to related parties (Consolidated, page 290, Sr. No. 4) shows a net return of (93) crore from Associates/JV and (9) crore from KMP/Relative, indicating no significant new loans/advances given by the company to related parties."
+    },
+    {
+      "flag_number": 19,
+      "flag_name": "Loans to related parties",
+      "category": "Related Party",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (ii) Balances as on March 31, 2024 with Related Parties, Sr. No. 1 Loans and Advances, Associates / Joint Ventures: 559 crores.",
+      "extracted_data": {
+        "loans_to_related_parties": 559
+      }
+    },
+    {
+      "flag_number": 19,
+      "flag_name": "RPT Loans/Advances",
+      "category": "RPT",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Loans and Advances, Deposits Given: 3 (Crores ₹); Loans and Advances, Deposits Returned: 21 (Crores ₹). These amounts are very small compared to total assets.",
+      "extracted_data": {
+        "total_rpt_amount": 28045
+      }
+    },
+    {
+      "flag_number": 20,
+      "flag_name": "Related Party Guarantees",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Total guarantees to related parties are 24,971 crore, which is 3.01% of shareholders' equity (8,28,881 crore). This is not considered a high percentage.",
+      "extracted_data": {
+        "contingent_liabilities": 24971,
+        "shareholders_equity": 828881
+      }
+    },
+    {
+      "flag_number": 20,
+      "flag_name": "Guarantees to related parties",
+      "category": "Related Party",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (ii) Balances as on March 31, 2024 with Related Parties, Sr. No. 4 Financial Guarantees, Associates / Joint Ventures: 5,350 crores.",
+      "extracted_data": {
+        "guarantees_to_related_parties": 5350
+      }
+    },
+    {
+      "flag_number": 20,
+      "flag_name": "RPT Guarantees",
+      "category": "RPT",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Guarantees (I)(B) (i) On behalf of Joint Arrangements: 1,078 (Crores ₹); (ii) On behalf of Associates / Joint Ventures / Others: 5,880 (Crores ₹). Total Guarante: 6,958 (Crores ₹). Total Assets: 19,50,121 (Crores ₹). Guarantees/Total Assets = 0.35%.",
+      "extracted_data": {
+        "contingent_liabilities": 6970,
+        "total_assets": 1950121
+      }
+    },
+    {
+      "flag_number": 21,
+      "flag_name": "Related Party Asset Transfers",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "The RPT table shows 'Purchase of Property, Plant and Equipment and Intangible Assets' and 'Sale / Redemption of Investments' with related parties, but these are transactions with related parties, not necessarily transfers TO related parties that would be a red flag without more context. The amounts are not exceptionally high relative to total assets."
+    },
+    {
+      "flag_number": 21,
+      "flag_name": "Transfers to related parties",
+      "category": "Related Party",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (i) Transactions during the year ended March 31, 2024 with Related Parties, Sr. No. 3 Sale / Redemption of Investments, Associates / Joint Venture: 1 crore.",
+      "extracted_data": {
+        "transfers_to_related_parties": 1
+      }
+    },
+    {
+      "flag_number": 21,
+      "flag_name": "RPT Transfers",
+      "category": "RPT",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Purchase of Property, Plant and Equipment and Other Intangible Assets: 527 (Crores ₹); Sale of Property, Plant and Equipment: 872 (Crores ₹). These are not excessively high compared to total assets.",
+      "extracted_data": {
+        "total_rpt_amount": 28045
+      }
+    },
+    {
+      "flag_number": 22,
+      "flag_name": "Related Party Compensation",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Total compensation to Key Managerial Personnel / Relative (200 crore) represents 0.27% of net profit (74,088 crore), which is not considered high.",
+      "extracted_data": {
+        "payment_to_kmp_relative": 200,
+        "net_profit": 74088
+      }
+    },
+    {
+      "flag_number": 22,
+      "flag_name": "Compensation to related parties",
+      "category": "Related Party",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (i) Transactions during the year ended March 31, 2024 with Related Parties, Sr. No. 11 Payment to Key Managerial Personnel / Relative: 99 crores.",
+      "extracted_data": {
+        "compensation_to_related_parties": 99
+      }
+    },
+    {
+      "flag_number": 22,
+      "flag_name": "RPT Compensation",
+      "category": "RPT",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Payment to Key Managerial Personnel / Relative: 97 (Crores ₹); Net Profit: 80,787 (Crores ₹). Compensation/Net Profit = 0.12%.",
+      "extracted_data": {
+        "total_rpt_amount": 28045,
+        "net_profit": 80787
+      }
+    },
+    {
+      "flag_number": 23,
+      "flag_name": "Related Party Circular Transactions",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "No textual evidence of circular transactions with related parties. The RPT disclosures state that transactions are 'in its ordinary course of business and on an arm’s length basis'."
+    },
+    {
+      "flag_number": 23,
+      "flag_name": "Circular transactions with related parties",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "Management Discussion and Analysis, Page 17, states: 'All related party transactions of the Company and its subsidiaries are at arm’s length and in the ordinary course of business.' There is no explicit mention of circular transactions."
+    },
+    {
+      "flag_number": 23,
+      "flag_name": "RPT Circular Transactions",
+      "category": "RPT",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "The document describes various RPTs (Page 18-24, 147-151). While there are many transactions, the justification (Page 19, 20, 21, 25) generally states they are at arm's length and in the ordinary course of business. No explicit mention of circular transactions as a red flag.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 24,
+      "flag_name": "Related Party Transactions Not at Arm's Length",
+      "category": "Related Party",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "All contracts / arrangements / transactions entered by the Company with related parties were in its ordinary course of business and on an arm’s length basis."
+    },
+    {
+      "flag_number": 24,
+      "flag_name": "Related party transactions with unlisted entities",
+      "category": "Related Party",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 3,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (i) and (ii) list numerous related parties (Associates/Joint Ventures/Others) without specifying their listing status for each transaction. Given the nature of these entities, it is highly probable that some are unlisted."
+    },
+    {
+      "flag_number": 24,
+      "flag_name": "RPT Related Party Definition",
+      "category": "RPT",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The document uses \"related parties\" as per Ind AS 24 (Page 105, 134, 147, 158, 203, 237). This is a standard accounting definition.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 25,
+      "flag_name": "Flag 25",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 26,
+      "flag_name": "Flag 26",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 27,
+      "flag_name": "Flag 27",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 28,
+      "flag_name": "Promoter Shareholding Changes",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The 'Change during the year' for Mukesh D Ambani (Promoter) is '-' (zero change) (Page 279, 14.3 Shareholding of Promoter)."
+    },
+    {
+      "flag_number": 28,
+      "flag_name": "Promoter shareholding changes",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Notes to the Consolidated Financial Statements, Page 146, Note 14.3 Shareholding of Promoter, shows 'change during the year' as '-' for Mukesh D Ambani, indicating no change."
+    },
+    {
+      "flag_number": 28,
+      "flag_name": "Promoter Pledge Changes",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 2,
+      "evidence_text": "No explicit information on promoter pledged shares or changes in them is provided.",
+      "extracted_data": {
+        "promoter_pledged_percent": null
+      }
+    },
+    {
+      "flag_number": 29,
+      "flag_name": "Promoter Pledged Shares",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "No information found regarding pledged shares by promoters in the provided text."
+    },
+    {
+      "flag_number": 29,
+      "flag_name": "Promoter pledged shares",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "No information found regarding pledged promoter shares. Assumed 0%."
+    },
+    {
+      "flag_number": 29,
+      "flag_name": "Promoter Loans",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The Company has not given any loans or advances to any firm/company in which its directors are interested.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 30,
+      "flag_name": "Promoter Loans",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The Company has not given any loans or advances to any firm / company in which its directors are interested."
+    },
+    {
+      "flag_number": 30,
+      "flag_name": "Loans to promoters",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (ii) Balances as on March 31, 2024 with Related Parties, Sr. No. 1 Loans and Advances, Key Managerial Personnel / Relative: 0 crores."
+    },
+    {
+      "flag_number": 30,
+      "flag_name": "Promoter Sales",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "No explicit mention of promoter share sales as a red flag. Promoter shareholding is stable.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 31,
+      "flag_name": "Promoter Asset Sales",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "No specific mention of significant asset sales by promoters to the company. The RPT table shows 'Purchase of Property, Plant and Equipment and Intangible Assets' and 'Purchase / Subscription of Investments' from KMP/Relative, but these are not necessarily promoter asset sales that would be a red flag without more context."
+    },
+    {
+      "flag_number": 31,
+      "flag_name": "Promoter selling shares",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Notes to the Consolidated Financial Statements, Page 146, Note 14.3 Shareholding of Promoter, shows 'change during the year' as '-' for Mukesh D Ambani, indicating no selling of shares."
+    },
+    {
+      "flag_number": 31,
+      "flag_name": "Complex Promoter Structure",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "Distribution of shareholding (Page 58) shows \"Promoter and Promoter Group\" as a single entity. No indication of overly complex structure.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 32,
+      "flag_name": "Complex Promoter Structure",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "The shareholding pattern (page 279) shows 'Promoter and Promoter Group' as a single category with Mukesh D Ambani as the main promoter. No indication of an overly complex structure."
+    },
+    {
+      "flag_number": 32,
+      "flag_name": "Complex promoter structure",
+      "category": "Promoter",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 3,
+      "evidence_text": "Corporate Governance Report, Page 62, Shareholding Pattern, lists 'Promoter and Promoter Group' with 47 shareholders, indicating a group structure that can be complex."
+    },
+    {
+      "flag_number": 32,
+      "flag_name": "Promoter Remuneration",
+      "category": "Promoter",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The remuneration paid by the Company to its directors during the year is in accordance with the provisions of Section 197 read with Schedule V of the Act.",
+      "extracted_data": {
+        "net_profit": 80787
+      }
+    },
+    {
+      "flag_number": 33,
+      "flag_name": "Independent Directors Issues",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "Page 171, 'Board Composition and category of Directors' shows 53.85% Independent Directors. Page 174, 'Board Meetings and Attendance' shows 100% attendance for all independent directors except His Excellency Yasir Othman H. Al Rumayyan (66.67%). This attendance is not extremely low to trigger a flag. Normal changes and re-appointments of IDs are also noted."
+    },
+    {
+      "flag_number": 33,
+      "flag_name": "Directors with multiple directorships",
+      "category": "Governance",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Corporate Governance Report, Page 56, Brief Profile of Directors, shows Adil Zainulbhai with 9 other directorships and K. V. Chowdary with 7 other directorships, exceeding the common threshold of 7."
+    },
+    {
+      "flag_number": 33,
+      "flag_name": "Director Issues",
+      "category": "Governance",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Shri Mukesh D. Ambani is the father of Ms. Isha M. Ambani, Shri Akash M. Ambani and Shri Anant M. Ambani. Shri Nikhil R. Meswani and Shri Hital R. Meswani are brothers...",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 34,
+      "flag_name": "Board Effectiveness Issues",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Page 174, 'Board Meetings and Attendance' shows 6 out of 6 meetings held in FY2022-23, with high attendance. Page 171, 'Board Composition and category of Directors' shows diversity in gender and nationality. No textual evidence of effectiveness issues."
+    },
+    {
+      "flag_number": 34,
+      "flag_name": "Board independence issues",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Corporate Governance Report, Page 56, Brief Profile of Directors, lists 8 Independent Directors out of 15 total directors. Mukesh D. Ambani is Chairman and Managing Director (Executive). The requirement is at least 1/3rd independent directors (5 out of 15), which is met. Page 57, 'Board Independence' section, states: 'In the opinion of the Board, the Independent Directors fulfill the conditions specified in the Listing Regulations and are independent of the management.'"
+    },
+    {
+      "flag_number": 34,
+      "flag_name": "Board Issues",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "All directors have attended all the board meetings except His Excellency Yasir Othman H. Al Rumayyan, who has attended 2 out of 6 meetings held during the year.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 35,
+      "flag_name": "Flag 35",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 36,
+      "flag_name": "Management Turnover",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "The document does not provide specific management turnover data. Changes in KMP roles are noted as part of the normal course of business (Page 196, Board's Report, 'Directors and Key Managerial Personnel')."
+    },
+    {
+      "flag_number": 36,
+      "flag_name": "Penalties/strictures",
+      "category": "Governance",
+      "severity": "High",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Corporate Governance Report, Page 63, 'Details of non-compliance by the Company, penalties, strictures imposed on the Company by stock exchange or SEBI, or any statutory authority, on any matter related to capital markets, during the last three years' lists multiple ongoing legal/regulatory matters with penalties and appeals, including a SEBI adjudication order with a penalty of C 25 crore (paid under protest) and a SEBI order to disgorge C 447.27 crore (C 250 crore deposited)."
+    },
+    {
+      "flag_number": 36,
+      "flag_name": "Management Issues",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "No explicit mention of high management turnover or lack of experience as a red flag.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 37,
+      "flag_name": "Penalties/Sanctions",
+      "category": "Governance",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Page 183, 'Details of non-compliance by the Company, penalties, strictures imposed on the Company by stock exchange or SEBI, or any statutory authority, on any matter related to capital markets, during the last three years' mentions several SEBI orders and penalties, including a penalty of C 25 crore and C 30 lakh."
+    },
+    {
+      "flag_number": 37,
+      "flag_name": "Legal/regulatory issues",
+      "category": "Governance",
+      "severity": "High",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Corporate Governance Report, Page 63, 'Details of non-compliance by the Company, penalties, strictures imposed on the Company by stock exchange or SEBI, or any statutory authority, on any matter related to capital markets, during the last three years' lists multiple ongoing legal/regulatory matters with penalties and appeals."
+    },
+    {
+      "flag_number": 37,
+      "flag_name": "Penalties/Strictures",
+      "category": "Governance",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "On December 16, 2010, SEBI issued a show cause notice (SCN)... The appeal of RIL and other notices has been admitted by the Hon’ble Supreme Court of India... On December 22, 2021, SEBI issued a show cause notice... The Adjudicating Officer of SEBI passed an order on June 20, 2022 imposing a penalty of C 30 lakh. Appeal has been filed before the Securities Appellate Tribunal (“SAT”) against this order... and appeal is pending.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 38,
+      "flag_name": "Flag 38",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 39,
+      "flag_name": "Legal/Regulatory Issues",
+      "category": "Governance",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Page 183, 'Details of non-compliance by the Company, penalties, strictures imposed on the Company by stock exchange or SEBI, or any statutory authority, on any matter related to capital markets, during the last three years' and '36. Contingent Liabilities & Commitments (I) Contingent Liabilities (A) Claims against the Company / disputed liabilities not acknowledged as debts' (Page 295) list several ongoing legal disputes and regulatory issues."
+    },
+    {
+      "flag_number": 39,
+      "flag_name": "Management tone",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "Chairman's statement (Page 27-28) and Management Discussion and Analysis (Page 30) use positive and forward-looking language ('India is shining as a beacon of stability and prosperity', 'Reliance delivered robust annual performance'), but it is not overly optimistic or defensive."
+    },
+    {
+      "flag_number": 39,
+      "flag_name": "Legal Issues",
+      "category": "Governance",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "There are certain disputes relating to the E&P Business of the Company which are presently sub judice before various courts and tribunals. The details of these disputes have been provided in the notes to accounts (refer Note 33.3 and 33.4 of Standalone Financial Statements).",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 40,
+      "flag_name": "Related Party Disclosure Issues",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The Company has complied with all mandatory requirements of Regulation 34 of the Listing Regulations. Also, all contracts / arrangements / transactions entered by the Company with related parties were in its ordinary course of business and on an arm’s length basis."
+    },
+    {
+      "flag_number": 40,
+      "flag_name": "Risk disclosures",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Management Discussion and Analysis - Risk and Governance (Page 39-40) provides detailed risk disclosures across various categories (Strategic and Commercial Risks, Safety and Operational Risks, Physical Security and Natural Calamity Risks, Compliance and Control Risks, Financial Risks), indicating comprehensive disclosure."
+    },
+    {
+      "flag_number": 40,
+      "flag_name": "Whistleblower Complaints",
+      "category": "Governance",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The Company has a Vigil Mechanism and Whistle-Blower policy under which the employees are encouraged to report violations of applicable laws and regulations and the Code of Conduct – without fear of any retaliation. There was no instance of denial of access to the Audit Committee.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 41,
+      "flag_name": "Flag 41",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 42,
+      "flag_name": "Flag 42",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 43,
+      "flag_name": "Low Interest Coverage Ratio",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Interest Coverage Ratio = EBIT / Finance Costs = 1,13,601 / 19,571 = 5.80. This is a healthy ratio, well above typical concern thresholds.",
+      "extracted_data": {
+        "ebit": 113601,
+        "finance_costs": 19571,
+        "interest_coverage_ratio": 5.8
+      }
+    },
+    {
+      "flag_number": 43,
+      "flag_name": "Interest coverage ratio",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Page 199, Note 41. Ratio Analysis, Sr. No. 3 Debt Service Coverage Ratio: 1.84, which is above the 1.5 threshold.",
+      "extracted_data": {
+        "interest_coverage_ratio": 1.84
+      }
+    },
+    {
+      "flag_number": 43,
+      "flag_name": "Interest Coverage Ratio",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "EBIT: 130,286 (Crores ₹); Finance Costs: 24,269 (Crores ₹). Interest Coverage Ratio = 5.37.",
+      "extracted_data": {
+        "ebit": 130286,
+        "finance_costs": 24269
+      }
+    },
+    {
+      "flag_number": 44,
+      "flag_name": "Low Current Ratio",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Current Ratio = Current Assets / Current Liabilities = 4,25,296 / 3,95,743 = 1.07. This ratio is above 1, indicating good short-term liquidity.",
+      "extracted_data": {
+        "current_assets": 425296,
+        "current_liabilities": 395743,
+        "current_ratio": 1.07
+      }
+    },
+    {
+      "flag_number": 44,
+      "flag_name": "Current ratio",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Page 199, Note 41. Ratio Analysis, Sr. No. 1 Current Ratio: 1.09, which is above the 1 threshold.",
+      "extracted_data": {
+        "current_ratio": 1.09
+      }
+    },
+    {
+      "flag_number": 44,
+      "flag_name": "Current Ratio",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Total Current Assets: 4,99,270 (Crores ₹); Total Current Liabilities: 4,53,737 (Crores ₹). Current Ratio = 1.10.",
+      "extracted_data": {
+        "current_assets": 499270,
+        "current_liabilities": 453737
+      }
+    },
+    {
+      "flag_number": 45,
+      "flag_name": "Flag 45",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 46,
+      "flag_name": "Flag 46",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 47,
+      "flag_name": "High Contingent Liabilities",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Contingent liabilities of 6,802 crore represent 0.82% of shareholders' equity (8,28,881 crore), which is a very low percentage.",
+      "extracted_data": {
+        "contingent_liabilities": 6802,
+        "shareholders_equity": 828881
+      }
+    },
+    {
+      "flag_number": 47,
+      "flag_name": "High contingent liabilities",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Contingent liabilities (6,326 crores) are 0.68% of shareholders' equity (9,25,788 crores), which is below the 10% threshold.",
+      "extracted_data": {
+        "contingent_liabilities": 6326,
+        "shareholders_equity": 925788
+      }
+    },
+    {
+      "flag_number": 47,
+      "flag_name": "Contingent Liabilities",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Contingent Liabilities: 6,970 (Crores ₹); Shareholders Equity: 10,09,626 (Crores ₹). Contingent Liabilities/Shareholders Equity = 0.69%.",
+      "extracted_data": {
+        "contingent_liabilities": 6970,
+        "shareholders_equity": 1009626
+      }
+    },
+    {
+      "flag_number": 48,
+      "flag_name": "Off-Balance Sheet Items",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "The balance sheet and notes disclose contingent liabilities, which are standard. No other significant off-balance sheet items that would be considered a red flag are indicated."
+    },
+    {
+      "flag_number": 48,
+      "flag_name": "Off-balance sheet items",
+      "category": "Balance Sheet",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Page 160, Note 35 (II) Commitments, lists 'Estimated amount of contracts remaining to be executed on capital account and not provided for' (25,047 crores) and 'Other Commitments (Investments)' (4,466 crores), indicating significant off-balance sheet commitments."
+    },
+    {
+      "flag_number": 48,
+      "flag_name": "Off-Balance Sheet Items",
+      "category": "Balance Sheet",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "Estimated amount of contracts remaining to be executed on capital account and not provided for: 31,629 (Crores ₹). This is a commitment, not necessarily off-balance sheet, but it is disclosed.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 49,
+      "flag_name": "Revenue Recognition Issues",
+      "category": "Revenue",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The notes to the financial statements describe the revenue recognition policies, stating they are in line with Ind AS and generally accepted accounting principles. No specific issues or concerns regarding revenue recognition are mentioned."
+    },
+    {
+      "flag_number": 49,
+      "flag_name": "Revenue recognition issues",
+      "category": "Revenue",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Independent Auditor's Report, Page 127, Sr. No. 3 Revenue Recognition, states that auditors of subsidiaries (Reliance Jio Infocomm Limited and Reliance Retail Ventures Limited) reported revenue recognition as a key audit matter due to high volumes, complexity, and risk of inappropriate recognition."
+    },
+    {
+      "flag_number": 49,
+      "flag_name": "Revenue Recognition Issues",
+      "category": "Revenue",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "The auditors of Reliance Jio Infocomm Limited (‘RJIL’), a step-down subsidiary of the Parent, have reported revenue recognition as a key audit matter due to the high volumes of data processed by the IT systems and the complexity of those IT systems... In respect of the key audit matter reported to us by the auditors of RJIL, we performed inquiry of and oversight on the audit procedures performed by them to address the key audit matter... The auditors of Reliance Retail Ventures Limited (‘RRVL’)... have reported revenue recognition as a key audit matter... In respect of the key audit matter reported to us by the auditors of RRVL, we performed inquiry of and oversight on the audit procedure performed by them to address the key audit matter.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 50,
+      "flag_name": "Flag 50",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 51,
+      "flag_name": "Flag 51",
+      "category": "UNKNOWN",
+      "severity": "MEDIUM",
+      "is_triggered": false,
+      "confidence_score": 0,
+      "evidence_text": "Not analyzed",
+      "page_references": [],
+      "extracted_data": {},
+      "detection_method": "llm"
+    },
+    {
+      "flag_number": 52,
+      "flag_name": "Customer Concentration",
+      "category": "Revenue",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 4,
+      "evidence_text": "No textual evidence of high customer concentration. The document mentions 'diverse customer segments' for Retail and 'diverse customer base' for Digital Services, suggesting a broad customer base."
+    },
+    {
+      "flag_number": 52,
+      "flag_name": "Customer concentration",
+      "category": "Revenue",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Management Discussion and Analysis sections for Retail (Page 31), Digital Services (Page 33), and Oil to Chemicals (Page 36) indicate a diversified customer base with millions of subscribers and global operations, suggesting no significant customer concentration."
+    },
+    {
+      "flag_number": 52,
+      "flag_name": "Customer Concentration",
+      "category": "Revenue",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 3,
+      "evidence_text": "No explicit mention of customer concentration as a red flag.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 53,
+      "flag_name": "Aggressive Risk Disclosures",
+      "category": "Textual",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The 'Risk and Governance' section (Page 120-126) provides detailed and balanced disclosures of various risks (physical, transition, market, credit, liquidity, IT, data privacy, cybersecurity, HSE). The language is factual and comprehensive, not aggressive."
+    },
+    {
+      "flag_number": 53,
+      "flag_name": "Aggressive accounting policies",
+      "category": "Textual",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "Independent Auditor's Report, Page 128, Opinion section, states 'unmodified opinion' and evaluates 'appropriateness of accounting policies used and the reasonableness of accounting estimates', with no specific mention of aggressive policies."
+    },
+    {
+      "flag_number": 53,
+      "flag_name": "Risk Disclosures",
+      "category": "Textual",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The 'Risk and Governance' section (Page 41-42) provides detailed risk disclosures.",
+      "extracted_data": {}
+    },
+    {
+      "flag_number": 54,
+      "flag_name": "Aggressive Management Tone",
+      "category": "Textual",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The 'Chairman and Managing Director’s Statement' (Page 59-60) and 'Management Discussion and Analysis' (Page 75-79) use positive but balanced language, acknowledging challenges while highlighting achievements. No overly aggressive or unrealistic tone detected."
+    },
+    {
+      "flag_number": 54,
+      "flag_name": "Related party transactions with complex structures",
+      "category": "Textual",
+      "severity": "Medium",
+      "is_triggered": true,
+      "confidence_score": 5,
+      "evidence_text": "Consolidated Financial Statements, Note 33 (i) and (ii) list numerous related parties, including subsidiaries, associates, and joint ventures. The 'Background' section for Item No. 6 (Page 18) describes a complex joint venture structure involving Viacom18, Star India Private Limited (SIPL), and The Walt Disney Company."
+    },
+    {
+      "flag_number": 54,
+      "flag_name": "Management Tone",
+      "category": "Textual",
+      "severity": "Low",
+      "is_triggered": false,
+      "confidence_score": 5,
+      "evidence_text": "The 'Chairman and Managing Director’s Statement' (Page 31) has a positive and forward-looking tone, emphasizing growth and opportunities.",
+      "extracted_data": {}
+    }
+  ],
+  "financial_data": {
+    "2023": {
+      "balance_sheet": {
+        "total_assets": 1607431,
+        "total_liabilities": 778550,
+        "shareholders_equity": 828881,
+        "current_assets": 425296,
+        "current_liabilities": 395743,
+        "total_debt": 313966,
+        "short_term_debt": 130790,
+        "long_term_debt": 183176,
+        "receivables": 28448,
+        "inventory": 140008,
+        "intangible_assets": 63681,
+        "cash_and_equivalents": 68664,
+        "contingent_liabilities": 6802
+      },
+      "p_and_l": {
+        "revenue": 974864,
+        "gross_profit": 386381,
+        "ebitda": 153920,
+        "ebit": 113601,
+        "net_profit": 74088,
+        "net_margin_percent": 7.6,
+        "cost_of_goods_sold": 588483
+      },
+      "cash_flow": {
+        "cfo": 115032,
+        "cfi": -91235,
+        "cff": 10455,
+        "capex": 140988,
+        "free_cash_flow": -25956
+      },
+      "auditor": {
+        "auditor_name": "Deloitte Haskins & Sells LLP and Chaturvedi & Shah LLP",
+        "audit_opinion": "unmodified opinion",
+        "audit_fees": 77,
+        "going_concern_warning": false,
+        "emphasis_of_matter": false
+      },
+      "promoter": {
+        "promoter_shareholding_percent": 49.11,
+        "promoter_pledged_percent": null
+      },
+      "related_party": {
+        "total_rpt_amount": 36746
+      }
+    },
+    "2024": {
+      "balance_sheet": {
+        "total_assets": 1755986,
+        "total_liabilities": 830198,
+        "shareholders_equity": 925788,
+        "current_assets": 470100,
+        "current_liabilities": 397367,
+        "total_debt": 326540,
+        "short_term_debt": 56868,
+        "long_term_debt": 269672,
+        "receivables": 31628,
+        "inventory": 152770,
+        "intangible_assets": 158912,
+        "cash_and_equivalents": 97225,
+        "contingent_liabilities": 6326
+      },
+      "p_and_l": {
+        "revenue": 1000122,
+        "gross_profit": 414779,
+        "ebitda": 178677,
+        "ebit": 127845,
+        "net_profit": 79020,
+        "net_margin_percent": 7.9,
+        "cost_of_goods_sold": 585343
+      },
+      "cash_flow": {
+        "cfo": 158788,
+        "cfi": -114301,
+        "cff": -16646,
+        "capex": 152883,
+        "free_cash_flow": 5905
+      },
+      "auditor": {
+        "auditor_name": "Deloitte Haskins & Sells LLP and Chaturvedi & Shah LLP",
+        "audit_opinion": "unmodified opinion",
+        "audit_fees": 7865,
+        "going_concern_warning": false,
+        "emphasis_of_matter": false,
+        "auditor_resignation": false
+      },
+      "promoter": {
+        "promoter_shareholding_percent": 49.11,
+        "promoter_pledged_percent": 0.0
+      },
+      "related_party": {
+        "total_rpt_amount": 35460
+      }
+    },
+    "2025": {
+      "total_assets": 1950121,
+      "total_liabilities": 940495,
+      "shareholders_equity": 1009626,
+      "current_assets": 499270,
+      "current_liabilities": 453737,
+      "total_debt": 347530,
+      "short_term_debt": 110631,
+      "long_term_debt": 236899,
+      "receivables": 42121,
+      "inventory": 146062,
+      "intangible_assets": 144639,
+      "cash_and_equivalents": 106502,
+      "contingent_liabilities": 6970,
+      "revenue": 1071174,
+      "gross_profit": 649047,
+      "ebitda": 183422,
+      "ebit": 130286,
+      "net_profit": 80787,
+      "net_margin_percent": 7.54,
+      "cost_of_goods_sold": 629689,
+      "cfo": 178703,
+      "cfi": -137535,
+      "cff": -31891,
+      "capex": 139967,
+      "free_cash_flow": 38736,
+      "auditor_name": "Deloitte Haskins & Sells LLP and Chaturvedi & Shah LLP",
+      "audit_opinion": "Unmodified",
+      "audit_fees": 3700,
+      "going_concern_warning": false,
+      "emphasis_of_matter": false,
+      "promoter_shareholding_percent": 49.11,
+      "promoter_pledged_percent": null,
+      "total_rpt_amount": 28045
+    }
+  }
+}

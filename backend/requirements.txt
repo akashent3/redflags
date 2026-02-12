@@ -27,7 +27,7 @@ pdf2image==1.17.0
 # pytesseract==0.3.10  # Optional OCR
 
 # AI/ML
-google-generativeai==0.3.2
+google-genai
 pillow>=10.4.0  # Updated for Python 3.13 compatibility
 numpy>=2.0.0  # Updated for Python 3.13 compatibility (pre-built wheels)
 

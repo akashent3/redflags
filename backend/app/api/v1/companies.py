@@ -18,6 +18,7 @@ from app.schemas.company import (
 )
 from app.schemas.reports import ReportListResponse, ReportResponse
 from app.services.company_service import company_service
+from app.services.finedge_client import finedge_client
 
 logger = logging.getLogger(__name__)
 
@@ -244,4 +245,108 @@ async def get_company_reports(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get company reports: {str(e)}"
+        )
+
+
+@router.get(
+    "/finedge/search",
+    summary="Search companies via FinEdge API",
+    description="Live search for companies using FinEdge API. Returns NSE/BSE listed companies.",
+)
+async def search_companies_finedge(
+    q: str = Query(None, min_length=1, max_length=100, description="Search query (name or symbol)"),
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of results"),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Search for companies using FinEdge API (live data from NSE/BSE).
+
+    This endpoint fetches fresh data from FinEdge API which includes all NSE/BSE listed companies.
+    Use this for the company search dropdown to get real-time company data.
+
+    **Query Parameters:**
+    - `q`: Search query (optional - if not provided, returns all symbols up to limit)
+    - `limit`: Maximum number of results (1-500, default 50)
+
+    **Returns:**
+    - List of companies with symbol, name, exchange info
+
+    **Examples:**
+    - `/api/v1/companies/finedge/search?q=reliance`
+    - `/api/v1/companies/finedge/search?q=TCS`
+    - `/api/v1/companies/finedge/search?limit=100` (all companies)
+    """
+    try:
+        all_symbols = finedge_client.get_all_symbols()
+
+        # Filter if search query provided
+        if q:
+            query_lower = q.lower()
+            filtered = [
+                s for s in all_symbols
+                if query_lower in s.get("name", "").lower() or
+                   query_lower in s.get("symbol", "").lower() or
+                   query_lower in s.get("nse_code", "").lower() or
+                   query_lower in s.get("bse_code", "").lower()
+            ]
+        else:
+            filtered = all_symbols
+
+        # Limit results
+        results = filtered[:limit]
+
+        # Format response
+        formatted_results = [
+            {
+                "symbol": s.get("symbol", ""),
+                "name": s.get("name", ""),
+                "nse_code": s.get("nse_code", ""),
+                "bse_code": s.get("bse_code", ""),
+                "exchange": s.get("exchange", ""),
+                "isin": s.get("isin", ""),
+            }
+            for s in results
+        ]
+
+        return {
+            "total": len(filtered),
+            "returned": len(formatted_results),
+            "results": formatted_results
+        }
+
+    except Exception as e:
+        logger.error(f"Error searching companies via FinEdge: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to search companies via FinEdge API: {str(e)}"
+        )
+
+
+@router.get(
+    "/finedge/profile/{symbol}",
+    summary="Get company profile from FinEdge",
+    description="Get detailed company profile from FinEdge API.",
+)
+async def get_company_profile_finedge(
+    symbol: str,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get company profile from FinEdge API.
+
+    **Path Parameters:**
+    - `symbol`: NSE symbol (e.g., "RELIANCE", "TCS")
+
+    **Returns:**
+    - Company profile including sector, industry, market cap, etc.
+    """
+    try:
+        profile = finedge_client.get_company_profile(symbol)
+        return profile
+
+    except Exception as e:
+        logger.error(f"Error fetching company profile from FinEdge: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Company profile not found for symbol: {symbol}"
         )

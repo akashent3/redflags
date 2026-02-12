@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # AI
     gemini_api_key: str
     google_vision_api_key: Optional[str] = None
+    finedge_api_token: Optional[str] = None
 
     # CORS
     frontend_url: str = "http://localhost:3000"

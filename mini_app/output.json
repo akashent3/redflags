@@ -1,0 +1,275 @@
+{
+  "company": {
+    "name": "HDFC Bank Ltd",
+    "symbol": "HDFCBANK",
+    "sector": "Private Sector Bank (Financial Sector - reduced API flags)",
+    "industry": "Banks",
+    "statement_type": "consolidated",
+    "is_financial_sector": true
+  },
+  "risk_score": {
+    "overall_score": 1.8,
+    "risk_level": "CLEAN",
+    "risk_color": "#059669",
+    "risk_description": "Very low risk - no significant red flags",
+    "category_scores": {
+      "Auditor": {
+        "score": 9.9,
+        "weight": 18,
+        "triggered_count": 1,
+        "total_flags": 4,
+        "weighted_contribution": 1.8
+      },
+      "Cash Flow": {
+        "score": 0.0,
+        "weight": 18,
+        "triggered_count": 0,
+        "total_flags": 4,
+        "weighted_contribution": 0.0
+      },
+      "Related Party": {
+        "score": 0,
+        "weight": 14,
+        "triggered_count": 0,
+        "total_flags": 0,
+        "weighted_contribution": 0.0
+      },
+      "Promoter": {
+        "score": 0.0,
+        "weight": 15,
+        "triggered_count": 0,
+        "total_flags": 3,
+        "weighted_contribution": 0.0
+      },
+      "Governance": {
+        "score": 0,
+        "weight": 12,
+        "triggered_count": 0,
+        "total_flags": 0,
+        "weighted_contribution": 0.0
+      },
+      "Balance Sheet": {
+        "score": 0.0,
+        "weight": 13,
+        "triggered_count": 0,
+        "total_flags": 1,
+        "weighted_contribution": 0.0
+      },
+      "Revenue": {
+        "score": 0.0,
+        "weight": 5,
+        "triggered_count": 0,
+        "total_flags": 1,
+        "weighted_contribution": 0.0
+      },
+      "Textual": {
+        "score": 0,
+        "weight": 5,
+        "triggered_count": 0,
+        "total_flags": 0,
+        "weighted_contribution": 0.0
+      }
+    },
+    "summary": {
+      "total_flags_checked": 13,
+      "total_triggered": 1,
+      "critical_flags": 0,
+      "high_flags": 0,
+      "critical_flag_names": [],
+      "high_flag_names": []
+    }
+  },
+  "flags": [
+    {
+      "flag_number": 2,
+      "flag_name": "Qualified/Adverse/Disclaimer Opinion",
+      "category": "Auditor",
+      "severity": "CRITICAL",
+      "source": "PDF/Gemini",
+      "rule": "Auditor issued a qualified, adverse, or disclaimer opinion instead of unmodified/clean opinion",
+      "triggered": false,
+      "confidence": 100,
+      "evidence": "Auditor issued an unmodified opinion (page 428)",
+      "details": "",
+      "data": {}
+    },
+    {
+      "flag_number": 3,
+      "flag_name": "Emphasis of Matter",
+      "category": "Auditor",
+      "severity": "MEDIUM",
+      "source": "PDF/Gemini",
+      "rule": "Auditor included Emphasis of Matter or Other Matter paragraphs highlighting concerns",
+      "triggered": true,
+      "confidence": 90,
+      "evidence": "Auditor's report includes 'Other Matters' paragraphs (page 453)",
+      "details": "Refers to actuarial valuations of subsidiaries and prior year audit by other auditors.",
+      "data": {}
+    },
+    {
+      "flag_number": 4,
+      "flag_name": "Going Concern Doubt",
+      "category": "Auditor",
+      "severity": "CRITICAL",
+      "source": "PDF/Gemini",
+      "rule": "Auditor or notes mention material uncertainty about ability to continue as going concern",
+      "triggered": false,
+      "confidence": 100,
+      "evidence": "Auditor's report does not mention material uncertainty about going concern (page 452)",
+      "details": "",
+      "data": {}
+    },
+    {
+      "flag_number": 5,
+      "flag_name": "KAM Revenue Recognition",
+      "category": "Auditor",
+      "severity": "HIGH",
+      "source": "PDF/Gemini",
+      "rule": "Revenue recognition listed as a Key Audit Matter (high risk area per auditor)",
+      "triggered": false,
+      "confidence": 100,
+      "evidence": "Revenue recognition is not listed as a Key Audit Matter (page 442)",
+      "details": "",
+      "data": {}
+    },
+    {
+      "flag_number": 7,
+      "flag_name": "PAT vs CFO Divergence",
+      "category": "Cash Flow",
+      "severity": "HIGH",
+      "source": "API",
+      "rule": "Triggers if PAT growth exceeds CFO growth by >30%, or PAT grows >10% while CFO declines >10%",
+      "triggered": false,
+      "reason": "Cannot calculate growth rates"
+    },
+    {
+      "flag_number": 11,
+      "flag_name": "Exceptional Items Material",
+      "category": "Cash Flow",
+      "severity": "MEDIUM",
+      "source": "API",
+      "rule": "Triggers if exceptional items exceed 10% of PAT",
+      "triggered": false,
+      "reason": "No PAT data"
+    },
+    {
+      "flag_number": 14,
+      "flag_name": "Other Income Dependency",
+      "category": "Cash Flow",
+      "severity": "LOW",
+      "source": "API",
+      "rule": "Triggers if other income >15% of revenue OR >30% of PAT",
+      "triggered": false,
+      "reason": "No revenue data"
+    },
+    {
+      "flag_number": 22,
+      "flag_name": "High Promoter Pledge",
+      "category": "Promoter",
+      "severity": "CRITICAL",
+      "source": "API",
+      "rule": "Triggers if promoter shares are pledged (per SEBI declaration)",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "Promoter shares pledged: No (as of Sep 2025). Exact pledge % requires annual report analysis.",
+      "data": {
+        "pledge_exists": false,
+        "period": "Sep 2025"
+      }
+    },
+    {
+      "flag_number": 23,
+      "flag_name": "Promoter Pledge Increasing",
+      "category": "Promoter",
+      "severity": "HIGH",
+      "source": "API",
+      "rule": "Triggers if promoter pledge appeared in recent quarters (was absent earlier)",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "Pledge trend: Sep 2025: No, Jun 2025: No, Mar 2025: No, Dec 2024: No",
+      "data": {
+        "pledge_trend": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "labels": [
+          "Sep 2025",
+          "Jun 2025",
+          "Mar 2025",
+          "Dec 2024"
+        ]
+      }
+    },
+    {
+      "flag_number": 24,
+      "flag_name": "Promoter Holding Declining",
+      "category": "Promoter",
+      "severity": "MEDIUM",
+      "source": "API",
+      "rule": "Triggers if promoter holding declined by >2% over 4 quarters",
+      "triggered": false,
+      "reason": "Incomplete promoter data"
+    },
+    {
+      "flag_number": 39,
+      "flag_name": "Q4 Revenue Concentration",
+      "category": "Revenue",
+      "severity": "MEDIUM",
+      "source": "API",
+      "rule": "Triggers if any single quarter contributes >35% of annual revenue",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "Highest quarter revenue: 0 (0.0% of annual 0). Quarters: ['0', '0', '0', '0']",
+      "data": {
+        "max_quarter_rev": 0.0,
+        "max_pct": 0,
+        "quarterly_revs": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "flag_number": 46,
+      "flag_name": "Low Cash Yield",
+      "category": "Cash Flow",
+      "severity": "MEDIUM",
+      "source": "API",
+      "rule": "Triggers if cash yield <5% when cash balance >5% of total assets, suggesting cash may not be real",
+      "triggered": false,
+      "reason": "Cash (0.0% of assets) not significant enough to test",
+      "data": {
+        "cash": 0.0,
+        "cash_pct_of_assets": 0.0
+      }
+    },
+    {
+      "flag_number": 49,
+      "flag_name": "Net Worth Declining",
+      "category": "Balance Sheet",
+      "severity": "MEDIUM",
+      "source": "API",
+      "rule": "Triggers if net worth (total equity) declined for 2+ consecutive years OR >20% over 3 years",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "Net worth: 0 -> 0 -> 0 (latest first). Declining for 0 year(s). Change: +0.0%",
+      "data": {
+        "equities": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "declining_years": 0,
+        "total_decline_pct": 0
+      }
+    }
+  ],
+  "api_flags_count": 9,
+  "gemini_flags_count": 4,
+  "errors": [],
+  "elapsed_seconds": 244.3
+}

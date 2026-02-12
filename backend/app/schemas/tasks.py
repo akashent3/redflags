@@ -9,7 +9,7 @@ class TaskSubmitResponse(BaseModel):
     """Response when a task is submitted."""
 
     task_id: str = Field(..., description="Celery task ID for tracking")
-    report_id: str = Field(..., description="Report ID being analyzed")
+    report_id: Optional[str] = None
     status: str = Field(..., description="Initial task status (PENDING)")
     message: str = Field(..., description="Human-readable message")
 

@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,9 +26,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
+  
   if (isAuthenticated) {
-    router.push('/dashboard');
-    return null;
+    return null; // or return a loading spinner
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -19,7 +19,7 @@ class ReportResponse(BaseModel):
 
     id: UUID
     company_id: UUID
-    fiscal_year: int
+    fiscal_year: str
     fiscal_year_display: str
     pdf_url: str
     file_size_mb: float

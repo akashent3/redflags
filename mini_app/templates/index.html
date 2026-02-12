@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedFlag AI - Annual Report Analyzer</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface2: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --accent: #3b82f6;
+            --red: #ef4444;
+            --orange: #f97316;
+            --yellow: #eab308;
+            --green: #22c55e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+        .header h1 { font-size: 2em; color: var(--red); margin-bottom: 5px; }
+        .header p { color: var(--text-muted); }
+
+        /* Upload Form */
+        .upload-form {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95em;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .btn-analyze {
+            padding: 10px 30px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-analyze:hover { background: #2563eb; }
+        .btn-analyze:disabled { background: var(--surface2); cursor: wait; }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 60px;
+            background: var(--surface);
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .loading.active { display: block; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid var(--surface2);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Errors */
+        .errors {
+            background: #451a1a;
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .errors li { margin-left: 20px; color: #fca5a5; }
+
+        /* Company Info */
+        .company-info {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .company-name { font-size: 1.3em; font-weight: 700; }
+        .company-meta span {
+            margin-left: 15px;
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+        .company-meta span b { color: var(--text); }
+
+        /* Risk Score Card */
+        .score-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .score-circle {
+            width: 140px; height: 140px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 2.5em;
+            font-weight: 800;
+            border: 6px solid;
+        }
+        .score-label { font-size: 1.4em; font-weight: 700; margin-bottom: 5px; }
+        .score-desc { color: var(--text-muted); }
+        .score-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .stat { text-align: center; }
+        .stat-num { font-size: 1.8em; font-weight: 700; }
+        .stat-label { color: var(--text-muted); font-size: 0.85em; }
+
+        /* Category Breakdown */
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .cat-card {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 18px;
+            border: 1px solid var(--border);
+        }
+        .cat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .cat-name { font-weight: 600; font-size: 0.95em; }
+        .cat-score {
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+        .cat-bar {
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .cat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .cat-detail { color: var(--text-muted); font-size: 0.8em; }
+
+        /* Flags Table */
+        .flags-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+        }
+        .flags-section h2 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        .flag-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .flag-filter {
+            padding: 5px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .flag-filter.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .flag-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--surface2);
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .flag-item:last-child { border-bottom: none; }
+        .flag-status {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .flag-status.triggered { background: #451a1a; }
+        .flag-status.clear { background: #14532d; }
+        .flag-body { flex: 1; }
+        .flag-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .flag-title strong { font-size: 0.95em; }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-critical { background: #7f1d1d; color: #fca5a5; }
+        .badge-high { background: #7c2d12; color: #fdba74; }
+        .badge-medium { background: #713f12; color: #fde047; }
+        .badge-low { background: #14532d; color: #86efac; }
+        .badge-source { background: var(--surface2); color: var(--text-muted); }
+        .flag-evidence {
+            color: var(--text-muted);
+            font-size: 0.88em;
+            line-height: 1.5;
+        }
+        .flag-num {
+            color: var(--text-muted);
+            font-size: 0.8em;
+            font-weight: 400;
+        }
+
+        /* Footer info */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>RedFlag AI</h1>
+        <p>Annual Report Red Flag Analyzer | {% if result %}{{ result.risk_score.summary.total_flags_checked }}{% else %}Up to 44{% endif %} Flags | 8 Categories</p>
+    </div>
+
+    <!-- Upload Form -->
+    <form class="upload-form" id="analyzeForm" method="post" action="/analyze" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Company Name or NSE Symbol</label>
+                <input type="text" name="company_name" placeholder="e.g., ITC Ltd, RELIANCE, TCS"
+                       value="{{ company_name or '' }}" required>
+            </div>
+            <div class="form-group">
+                <label>Annual Report (PDF)</label>
+                <input type="file" name="annual_report" accept=".pdf" required>
+            </div>
+            <button type="submit" class="btn-analyze" id="submitBtn">Analyze</button>
+        </div>
+    </form>
+
+    <!-- Loading -->
+    <div class="loading" id="loadingDiv">
+        <div class="spinner"></div>
+        <p>Analyzing annual report...</p>
+        <p style="color: var(--text-muted); font-size: 0.9em; margin-top: 10px;">
+            Fetching API data + Gemini PDF analysis (may take 30-60 seconds)
+        </p>
+    </div>
+
+    {% if result %}
+    <!-- Errors -->
+    {% if result.errors %}
+    <div class="errors">
+        <strong>Warnings:</strong>
+        <ul>
+            {% for err in result.errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Company Info -->
+    <div class="company-info">
+        <div>
+            <div class="company-name">{{ result.company.name }}</div>
+        </div>
+        <div class="company-meta">
+            <span>Symbol: <b>{{ result.company.symbol }}</b></span>
+            <span>Sector: <b>{{ result.company.sector }}</b></span>
+            <span>Statements: <b>{{ result.company.statement_type }}</b></span>
+            <span>Time: <b>{{ result.elapsed_seconds }}s</b></span>
+        </div>
+    </div>
+
+    <!-- Risk Score -->
+    <div class="score-card">
+        <div class="score-circle" style="border-color: {{ result.risk_score.risk_color }}; color: {{ result.risk_score.risk_color }};">
+            {{ result.risk_score.overall_score }}
+        </div>
+        <div class="score-label" style="color: {{ result.risk_score.risk_color }};">
+            {{ result.risk_score.risk_level }} RISK
+        </div>
+        <div class="score-desc">{{ result.risk_score.risk_description }}</div>
+        <div class="score-stats">
+            <div class="stat">
+                <div class="stat-num">{{ result.risk_score.summary.total_flags_checked }}</div>
+                <div class="stat-label">Flags Checked</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" style="color: var(--red);">{{ result.risk_score.summary.total_triggered }}</div>
+                <div class="stat-label">Triggered</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" style="color: var(--red);">{{ result.risk_score.summary.critical_flags }}</div>
+                <div class="stat-label">Critical</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" style="color: var(--orange);">{{ result.risk_score.summary.high_flags }}</div>
+                <div class="stat-label">High</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">{{ result.api_flags_count }}</div>
+                <div class="stat-label">API Flags</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">{{ result.gemini_flags_count }}</div>
+                <div class="stat-label">Gemini Flags</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="categories">
+        {% for cat_name, cat_data in result.risk_score.category_scores.items() %}
+        <div class="cat-card">
+            <div class="cat-header">
+                <span class="cat-name">{{ cat_name }}</span>
+                <span class="cat-score" style="background: {% if cat_data.score >= 50 %}#7f1d1d{% elif cat_data.score >= 25 %}#713f12{% else %}#14532d{% endif %}; color: {% if cat_data.score >= 50 %}#fca5a5{% elif cat_data.score >= 25 %}#fde047{% else %}#86efac{% endif %};">
+                    {{ cat_data.score }}%
+                </span>
+            </div>
+            <div class="cat-bar">
+                <div class="cat-bar-fill" style="width: {{ cat_data.score }}%; background: {% if cat_data.score >= 50 %}var(--red){% elif cat_data.score >= 25 %}var(--yellow){% else %}var(--green){% endif %};"></div>
+            </div>
+            <div class="cat-detail">
+                {{ cat_data.triggered_count }}/{{ cat_data.total_flags }} flags triggered |
+                Weight: {{ cat_data.weight }}% |
+                Contribution: {{ cat_data.weighted_contribution }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Flags Detail -->
+    <div class="flags-section">
+        <h2>All Flags ({{ result.risk_score.summary.total_flags_checked }})</h2>
+        <div class="flag-filters">
+            <button class="flag-filter active" onclick="filterFlags('all', this)">All</button>
+            <button class="flag-filter" onclick="filterFlags('triggered', this)">Triggered Only</button>
+            <button class="flag-filter" onclick="filterFlags('api', this)">API Source</button>
+            <button class="flag-filter" onclick="filterFlags('gemini', this)">Gemini/PDF Source</button>
+        </div>
+
+        <div id="flagsList">
+        {% for flag in result.flags %}
+        <div class="flag-item"
+             data-triggered="{{ 'true' if flag.triggered else 'false' }}"
+             data-source="{{ flag.get('source', 'unknown') | lower }}">
+            <div class="flag-status {{ 'triggered' if flag.triggered else 'clear' }}">
+                {% if flag.triggered %}<span style="color:#ef4444;font-weight:700;">!</span>{% else %}<span style="color:#22c55e;">{{ "\u2713" }}</span>{% endif %}
+            </div>
+            <div class="flag-body">
+                <div class="flag-title">
+                    <span class="flag-num">#{{ flag.flag_number }}</span>
+                    <strong>{{ flag.flag_name }}</strong>
+                    <span class="badge badge-{{ flag.severity | lower }}">{{ flag.severity }}</span>
+                    <span class="badge badge-source">{{ flag.get('source', 'N/A') }}</span>
+                    {% if flag.triggered and flag.get('confidence') %}
+                    <span class="badge" style="background: var(--surface2); color: var(--text-muted);">
+                        {{ flag.confidence }}% conf
+                    </span>
+                    {% endif %}
+                </div>
+                {% if flag.get('rule') %}
+                <div style="color: #60a5fa; font-size: 0.82em; margin-bottom: 4px;">
+                    Rule: {{ flag.rule }}
+                </div>
+                {% endif %}
+                <div class="flag-evidence">
+                    {{ flag.get('evidence') or flag.get('reason', 'No data available') }}
+                    {% if flag.get('details') %}
+                    <br><em>{{ flag.details }}</em>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+
+    <!-- JSON Download -->
+    <div style="text-align: center; margin-bottom: 30px;">
+        <a href="/api/results" target="_blank"
+           style="color: var(--accent); text-decoration: none; font-size: 0.9em;">
+            View Raw JSON Output &rarr;
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        RedFlag AI Mini App | {% if result %}{{ result.risk_score.summary.total_flags_checked }}{% else %}Up to 44{% endif %} Red Flags | 8 Categories | FinEdge API + Gemini 2.5 Flash
+    </div>
+</div>
+
+<script>
+    // Show loading spinner on form submit
+    document.getElementById('analyzeForm').addEventListener('submit', function() {
+        document.getElementById('loadingDiv').classList.add('active');
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').textContent = 'Analyzing...';
+    });
+
+    // Filter flags
+    function filterFlags(filter, btn) {
+        document.querySelectorAll('.flag-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('.flag-item').forEach(item => {
+            const triggered = item.dataset.triggered === 'true';
+            const source = item.dataset.source;
+            let show = true;
+
+            if (filter === 'triggered') show = triggered;
+            else if (filter === 'api') show = source.includes('api');
+            else if (filter === 'gemini') show = source.includes('gemini') || source.includes('pdf');
+
+            item.style.display = show ? 'flex' : 'none';
+        });
+    }
+</script>
+</body>
+</html>

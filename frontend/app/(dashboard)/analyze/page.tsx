@@ -17,28 +17,32 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
+  Building2,
 } from 'lucide-react';
+import { api } from '@/lib/api/client';
+
+interface CompanySearchResult {
+  symbol: string;
+  name: string;
+  nse_code: string;
+  bse_code: string;
+  exchange: string;
+  isin: string;
+}
 
 export default function AnalyzePage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'upload' | 'search'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'search'>('search');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<CompanySearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingSymbol, setAnalyzingSymbol] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Sample search results - will be replaced with real API
-  const sampleCompanies = [
-    { id: 1, name: 'Reliance Industries Ltd', code: 'RELIANCE', sector: 'Energy' },
-    { id: 2, name: 'Tata Consultancy Services', code: 'TCS', sector: 'IT Services' },
-    { id: 3, name: 'HDFC Bank Ltd', code: 'HDFCBANK', sector: 'Banking' },
-    { id: 4, name: 'Infosys Ltd', code: 'INFY', sector: 'IT Services' },
-    { id: 5, name: 'ICICI Bank Ltd', code: 'ICICIBANK', sector: 'Banking' },
-  ];
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -108,35 +112,19 @@ export default function AnalyzePage() {
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      // TODO: Replace with real API call
-      // const formData = new FormData();
-      // formData.append('file', selectedFile);
-      // const response = await api.reports.upload(selectedFile);
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      clearInterval(interval);
+      // Upload PDF to /reports/upload
+      setUploadProgress(20);
+      const response = await api.upload('/reports/upload', selectedFile);
       setUploadProgress(100);
 
-      // Redirect to results page
+      // Redirect to report page
       setTimeout(() => {
-        router.push('/report/1');
+        const reportId = response.data.report_id;
+        router.push(`/report/${reportId}`);
       }, 500);
     } catch (err: any) {
       console.error('Upload failed:', err);
-      setError(err.message || 'Upload failed. Please try again.');
+      setError(err.response?.data?.detail || 'Upload failed. Please try again.');
       setIsUploading(false);
       setUploadProgress(0);
     }
@@ -149,31 +137,107 @@ export default function AnalyzePage() {
     setError(null);
 
     try {
-      // TODO: Replace with real API call
-      // const results = await api.companies.search(searchQuery);
+      const response = await api.get<{
+        total: number;
+        returned: number;
+        results: CompanySearchResult[];
+      }>('/companies/finedge/search', {
+        params: {
+          q: searchQuery,
+          limit: 20,
+        },
+      });
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Filter sample companies
-      const filtered = sampleCompanies.filter(
-        (company) =>
-          company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          company.code.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-      setSearchResults(filtered);
+      setSearchResults(response.data.results);
     } catch (err: any) {
       console.error('Search failed:', err);
-      setError('Search failed. Please try again.');
+      setError(err.response?.data?.detail || 'Search failed. Please try again.');
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handleAnalyzeCompany = (companyId: number) => {
-    // TODO: Trigger analysis for selected company
-    router.push(`/report/${companyId}`);
+  const pollTaskStatus = async (taskId: string): Promise<any> => {
+    const maxAttempts = 120; // 10 minutes max
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      try {
+        const response = await api.get(`/analysis/task/${taskId}`);
+        const status = response.data.status;
+
+        if (status === 'SUCCESS') {
+          return response.data;
+        } else if (status === 'FAILURE') {
+          throw new Error(response.data.error || 'Analysis failed');
+        }
+
+        // Still pending/progress - wait and retry
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+        attempts++;
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    throw new Error('Analysis timed out');
+  };
+
+  const handleAnalyzeCompany = async (company: CompanySearchResult) => {
+    setIsAnalyzing(true);
+    setAnalyzingSymbol(company.symbol);
+    setError(null);
+
+    try {
+      // Trigger analysis via /analysis/analyze-symbol/{symbol}
+      const response = await api.post(`/analysis/analyze-symbol/${company.symbol}`);
+      
+      // ✅ NEW: Check if analysis already exists (instant completion)
+      if (response.data.status === 'COMPLETED') {
+        console.log('✓ Analysis already exists! Redirecting immediately...');
+        
+        // Get report_id from response
+        const reportId = response.data.report_id;
+        
+        if (!reportId) {
+          throw new Error('No report ID returned from completed analysis');
+        }
+        
+        // Redirect immediately to report page (< 1 second)
+        router.push(`/report/${reportId}`);
+        return;
+      }
+
+      // ✅ NEW: Validate task_id exists for new analysis
+      const taskId = response.data.task_id;
+      
+      if (!taskId) {
+        throw new Error('No task ID returned from server');
+      }
+
+      console.log('⏳ New analysis started. Polling for completion...');
+
+      // Poll for status (new analysis)
+      const result = await pollTaskStatus(taskId);
+
+      // Redirect to report page when complete
+      const reportId = result.report_id;
+      
+      if (!reportId) {
+        throw new Error('No report ID returned from analysis result');
+      }
+      
+      router.push(`/report/${reportId}`);
+    } catch (err: any) {
+      console.error('Analysis failed:', err);
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          'Analysis failed. Please try again.'
+      );
+      setIsAnalyzing(false);
+      setAnalyzingSymbol(null);
+    }
   };
 
   return (
@@ -182,24 +246,13 @@ export default function AnalyzePage() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Analyze Report</h1>
         <p className="mt-2 text-gray-600">
-          Upload an annual report PDF or search for a NIFTY 500 company
+          Search for any NSE/BSE company or upload an annual report PDF
         </p>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <div className="flex gap-8">
-          <button
-            onClick={() => setActiveTab('upload')}
-            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'upload'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-            }`}
-          >
-            <Upload className="h-4 w-4 inline mr-2" />
-            Upload PDF
-          </button>
           <button
             onClick={() => setActiveTab('search')}
             className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -210,6 +263,17 @@ export default function AnalyzePage() {
           >
             <Search className="h-4 w-4 inline mr-2" />
             Search Company
+          </button>
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'upload'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+            }`}
+          >
+            <Upload className="h-4 w-4 inline mr-2" />
+            Upload PDF
           </button>
         </div>
       </div>
@@ -327,7 +391,7 @@ export default function AnalyzePage() {
                     {isUploading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading & Analyzing...
+                        Analyzing...
                       </>
                     ) : (
                       <>
@@ -347,9 +411,8 @@ export default function AnalyzePage() {
                 {!isUploading && (
                   <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-800">
-                      <strong>What happens next?</strong> We'll extract financial
-                      data, check 54 red flags, and generate a comprehensive risk
-                      report. This usually takes 30-60 seconds.
+                      <strong>What happens next?</strong> We'll analyze the PDF using
+                      Gemini AI and check 44+ red flags. This usually takes 1-2 minutes.
                     </p>
                   </div>
                 )}
@@ -374,6 +437,19 @@ export default function AnalyzePage() {
               </div>
             )}
 
+            {/* Analyzing Alert */}
+            {isAnalyzing && analyzingSymbol && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md flex items-start gap-3 mb-6">
+                <Loader2 className="h-5 w-5 mt-0.5 flex-shrink-0 animate-spin" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Analyzing {analyzingSymbol}</p>
+                  <p className="text-sm mt-1">
+                    Checking for existing analysis or fetching latest annual report from NSE India...
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Search Bar */}
             <div className="flex gap-4 mb-6">
               <div className="flex-1 relative">
@@ -384,10 +460,11 @@ export default function AnalyzePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isAnalyzing}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
-              <Button onClick={handleSearch} disabled={isSearching || !searchQuery.trim()}>
+              <Button onClick={handleSearch} disabled={isSearching || !searchQuery.trim() || isAnalyzing}>
                 {isSearching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -404,25 +481,41 @@ export default function AnalyzePage() {
                 </h3>
                 {searchResults.map((company) => (
                   <div
-                    key={company.id}
+                    key={company.symbol}
                     className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
                   >
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{company.name}</h4>
+                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-gray-400" />
+                        {company.name}
+                      </h4>
                       <div className="flex items-center gap-4 mt-1">
                         <span className="text-sm text-gray-600">
-                          Code: <span className="font-medium">{company.code}</span>
+                          NSE: <span className="font-medium">{company.nse_code || company.symbol}</span>
                         </span>
+                        {company.bse_code && (
+                          <span className="text-sm text-gray-600">
+                            BSE: <span className="font-medium">{company.bse_code}</span>
+                          </span>
+                        )}
                         <span className="text-sm text-gray-600">
-                          Sector: {company.sector}
+                          {company.exchange}
                         </span>
                       </div>
                     </div>
                     <Button
-                      onClick={() => handleAnalyzeCompany(company.id)}
+                      onClick={() => handleAnalyzeCompany(company)}
+                      disabled={isAnalyzing}
                       variant="outline"
                     >
-                      Analyze
+                      {isAnalyzing && analyzingSymbol === company.symbol ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        'Analyze'
+                      )}
                     </Button>
                   </div>
                 ))}
@@ -438,7 +531,7 @@ export default function AnalyzePage() {
             ) : (
               <div className="text-center py-12">
                 <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600 mb-2">Search NIFTY 500 Companies</p>
+                <p className="text-gray-600 mb-2">Search NSE/BSE Listed Companies</p>
                 <p className="text-sm text-gray-500">
                   Enter a company name or stock code to get started
                 </p>
@@ -446,30 +539,14 @@ export default function AnalyzePage() {
             )}
           </div>
 
-          {/* Popular Companies */}
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Popular Companies
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sampleCompanies.slice(0, 4).map((company) => (
-                <button
-                  key={company.id}
-                  onClick={() => handleAnalyzeCompany(company.id)}
-                  className="text-left p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
-                >
-                  <h4 className="font-medium text-gray-900">{company.name}</h4>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-sm text-gray-600">
-                      {company.code}
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      {company.sector}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+          {/* Info */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>How it works:</strong> Search for any NSE/BSE company. If analysis already exists, 
+              you'll be redirected instantly (&lt; 1 second)! Otherwise, we'll automatically fetch the latest 
+              annual report from NSE India, extract financial data from FinEdge API, and analyze 44+ red flags 
+              using AI. New analysis typically takes 1-2 minutes.
+            </p>
           </div>
         </div>
       )}

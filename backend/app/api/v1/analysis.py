@@ -20,8 +20,9 @@ from app.schemas import (
     TaskStatusResponse,
     TaskSubmitResponse,
 )
-from app.tasks.analysis_tasks import analyze_report_task
+from app.tasks.analysis_tasks import analyze_report_task, analyze_company_by_symbol_task
 from app.utils import get_current_active_user
+from fastapi import Query 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -347,4 +348,124 @@ async def get_red_flags(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve red flags: {str(e)}",
+        )
+
+
+@router.post(
+    "/analyze-symbol/{symbol}",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Analyze company by symbol (auto-fetch from NSE)",
+    description="Automatically fetch latest annual report from NSE and analyze. Returns task ID or existing analysis.",
+)
+async def analyze_company_by_symbol(
+    symbol: str,
+    force_reanalyze: bool = Query(False, description="Force re-analysis even if completed analysis exists"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Analyze a company by NSE symbol - automatically fetches latest annual report.
+
+    **Smart Analysis Logic:**
+    1. If completed analysis exists → return immediately (< 1 second)
+    2. If pending/processing/failed report exists → trigger new analysis
+    3. If no report exists → fetch from NSE and analyze
+    4. If force_reanalyze=true → always re-analyze
+
+    **Path Parameters:**
+    - `symbol`: NSE symbol (e.g., "RELIANCE", "TCS", "INFY")
+
+    **Query Parameters:**
+    - `force_reanalyze`: Force re-analysis (default: false)
+
+    **Returns:**
+    - Existing analysis ID (if completed) OR task ID (if new analysis)
+    """
+    try:
+        from app.models.company import Company
+
+        logger.info(f"Analysis request for {symbol}, force_reanalyze={force_reanalyze}")
+
+                # Check if analysis already exists (only if not forcing re-analysis)
+        if not force_reanalyze:
+            # Find company by symbol
+            company = db.query(Company).filter(Company.nse_symbol == symbol).first()
+
+            if company:
+                # Get latest report for this company
+                latest_report = (
+                    db.query(AnnualReport)
+                    .filter(AnnualReport.company_id == company.id)
+                    .order_by(AnnualReport.fiscal_year.desc())
+                    .first()
+                )
+
+                if latest_report:
+                    # ✅ Check if ANY analysis exists for this report (regardless of status)
+                    existing_analysis = (
+                        db.query(AnalysisResult)
+                        .filter(AnalysisResult.report_id == latest_report.id)
+                        .first()
+                    )
+
+                    if existing_analysis:
+                        # If report is completed, return existing analysis
+                        if latest_report.is_processed == "completed":
+                            logger.info(
+                                f"✓ Completed analysis exists for {symbol}: {existing_analysis.id}"
+                            )
+                            return {
+                                "status": "COMPLETED",
+                                "analysis_id": str(existing_analysis.id),
+                                "report_id": str(latest_report.id),
+                                "task_id": None,
+                                "risk_score": existing_analysis.risk_score,
+                                "risk_level": existing_analysis.risk_level,
+                                "message": f"Analysis already exists for {company.name}. Viewing existing results.",
+                            }
+                        
+                        # ✅ NEW: If report is incomplete but analysis exists, return existing
+                        elif latest_report.is_processed in ["pending", "processing", "failed"]:
+                            logger.info(
+                                f"✓ Analysis exists for incomplete report {symbol}: {existing_analysis.id}"
+                            )
+                            logger.info(f"Report status: {latest_report.is_processed}. Returning existing analysis instead of creating duplicate.")
+                            
+                            # Update report status to completed if it was stuck
+                            if latest_report.is_processed != "completed":
+                                latest_report.is_processed = "completed"
+                                latest_report.processed_at = existing_analysis.analyzed_at
+                                db.commit()
+                            
+                            return {
+                                "status": "COMPLETED",
+                                "analysis_id": str(existing_analysis.id),
+                                "report_id": str(latest_report.id),
+                                "task_id": None,
+                                "risk_score": existing_analysis.risk_score,
+                                "risk_level": existing_analysis.risk_level,
+                                "message": f"Analysis already exists for {company.name}. Viewing existing results.",
+                            }
+                    
+                    # ✅ Only trigger new task if NO analysis exists at all
+                    elif latest_report.is_processed in ["pending", "processing", "failed"]:
+                        logger.info(
+                            f"Report exists but no analysis found (status: {latest_report.is_processed}). Creating new analysis..."
+                        )
+                        # Continue to submit new Celery task below
+        task = analyze_company_by_symbol_task.delay(symbol, str(current_user.id))
+
+        logger.info(f"Analysis task submitted for {symbol}: {task.id}")
+
+        return {
+            "task_id": task.id,
+            "status": "PENDING",
+            "message": f"Analysis task submitted for {symbol}. Fetching annual report from NSE...",
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to submit analysis task for {symbol}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit analysis task: {str(e)}",
         )

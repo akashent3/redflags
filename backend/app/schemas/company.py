@@ -60,5 +60,5 @@ class CompanyDetailResponse(CompanyResponse):
     """Detailed company information with related data."""
 
     total_reports: int = Field(0, description="Total number of annual reports")
-    latest_report_year: Optional[int] = Field(None, description="Most recent fiscal year")
-    earliest_report_year: Optional[int] = Field(None, description="Oldest fiscal year")
+    latest_report_year: Optional[str] = Field(None, description="Most recent fiscal year")
+    earliest_report_year: Optional[str] = Field(None, description="Oldest fiscal year")
