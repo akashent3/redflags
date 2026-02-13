@@ -25,8 +25,8 @@ class FlagCategory(str, enum.Enum):
     PROMOTER = "Promoter"
     GOVERNANCE = "Governance"
     BALANCE_SHEET = "Balance Sheet"
-    REVENUE = "Revenue Quality"
-    TEXTUAL = "Textual Analysis"
+    REVENUE = "Revenue"
+    TEXTUAL = "Textual"
 
 
 class RedFlag(Base):

@@ -405,6 +405,21 @@ def analyze_company_by_symbol_task(self, symbol: str, user_id: str) -> dict:
         processing_time = int(time.time() - start_time)
         analysis_result.processing_time_seconds = processing_time
 
+        # ADD THESE LINES HERE (Track user who triggered this analysis)
+        from app.models.user_analysis import UserAnalysis
+        try:
+            user_analysis = UserAnalysis(
+                user_id=UUID(user_id),
+                analysis_id=analysis_result.id
+            )
+            self.db.add(user_analysis)
+            self.db.commit()
+            logger.info(f"✓ Tracked user {user_id} triggered analysis {analysis_result.id}")
+        except Exception as e:
+            logger.warning(f"Failed to track user analysis: {e}")
+        # END OF NEW CODE
+
+
         # Update report status
         report.is_processed = "completed"
         report.processed_at = analysis_result.analyzed_at

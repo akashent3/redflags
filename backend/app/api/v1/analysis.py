@@ -414,6 +414,26 @@ async def analyze_company_by_symbol(
                             logger.info(
                                 f"✓ Completed analysis exists for {symbol}: {existing_analysis.id}"
                             )
+
+                            # ADD THESE LINES HERE (Track user access to existing analysis)
+                            from app.models.user_analysis import UserAnalysis
+                            try:
+                                existing_ua = db.query(UserAnalysis).filter(
+                                    UserAnalysis.user_id == current_user.id,
+                                    UserAnalysis.analysis_id == existing_analysis.id
+                                ).first()
+                                
+                                if not existing_ua:
+                                    user_analysis = UserAnalysis(
+                                        user_id=current_user.id,
+                                        analysis_id=existing_analysis.id
+                                    )
+                                    db.add(user_analysis)
+                                    db.commit()
+                                    logger.info(f"✓ Tracked user {current_user.id} access to analysis {existing_analysis.id}")
+                            except Exception as e:
+                                logger.warning(f"Failed to track user analysis: {e}")
+                            # END OF NEW CODE
                             return {
                                 "status": "COMPLETED",
                                 "analysis_id": str(existing_analysis.id),
@@ -430,7 +450,25 @@ async def analyze_company_by_symbol(
                                 f"✓ Analysis exists for incomplete report {symbol}: {existing_analysis.id}"
                             )
                             logger.info(f"Report status: {latest_report.is_processed}. Returning existing analysis instead of creating duplicate.")
-                            
+                            # ADD THESE LINES HERE (Track user access)
+                            from app.models.user_analysis import UserAnalysis
+                            try:
+                                existing_ua = db.query(UserAnalysis).filter(
+                                    UserAnalysis.user_id == current_user.id,
+                                    UserAnalysis.analysis_id == existing_analysis.id
+                                ).first()
+                                
+                                if not existing_ua:
+                                    user_analysis = UserAnalysis(
+                                        user_id=current_user.id,
+                                        analysis_id=existing_analysis.id
+                                    )
+                                    db.add(user_analysis)
+                                    db.commit()
+                                    logger.info(f"✓ Tracked user {current_user.id} access to analysis {existing_analysis.id}")
+                            except Exception as e:
+                                logger.warning(f"Failed to track user analysis: {e}")
+                            # END OF NEW CODE
                             # Update report status to completed if it was stuck
                             if latest_report.is_processed != "completed":
                                 latest_report.is_processed = "completed"

@@ -192,24 +192,23 @@ export default function AnalyzePage() {
       // Trigger analysis via /analysis/analyze-symbol/{symbol}
       const response = await api.post(`/analysis/analyze-symbol/${company.symbol}`);
       
-      // ✅ NEW: Check if analysis already exists (instant completion)
+      // ✅ Check if analysis already exists (instant completion)
       if (response.data.status === 'COMPLETED') {
         console.log('✓ Analysis already exists! Redirecting immediately...');
         
-        // Get report_id from response
         // Get analysis_id from response
-        const analysisId = response.data.analysis_id;  // ✅ CORRECT
-
+        const analysisId = response.data.analysis_id;
+        
         if (!analysisId) {
           throw new Error('No analysis ID returned from completed analysis');
         }
-
+        
         // Redirect immediately to report page (< 1 second)
-        router.push(`/report/${analysisId}`);  // ✅ CORRECT
+        router.push(`/report/${analysisId}`);
         return;
       }
 
-      // ✅ NEW: Validate task_id exists for new analysis
+      // ✅ Validate task_id exists for new analysis
       const taskId = response.data.task_id;
       
       if (!taskId) {
@@ -219,17 +218,35 @@ export default function AnalyzePage() {
       console.log('⏳ New analysis started. Polling for completion...');
 
       // Poll for status (new analysis)
-      // Poll for status (new analysis)
-    const result = await pollTaskStatus(taskId);
+      const result = await pollTaskStatus(taskId);
 
-    // Redirect to report page when complete
-    const analysisId = result.result?.analysis_id;  // ✅ CORRECT - Get from result object
+      // ✅ FIX: Get analysis_id from the TOP LEVEL of result (not nested)
+      console.log('Task result:', result);  // Debug log
+      
+      let analysisId;
+      
+      // Try different possible locations
+      if (result.analysis_id) {
+        // Case 1: analysis_id at top level
+        analysisId = result.analysis_id;
+      } else if (result.result && result.result.analysis_id) {
+        // Case 2: nested in result.result
+        analysisId = result.result.analysis_id;
+      } else if (result.data && result.data.analysis_id) {
+        // Case 3: nested in result.data
+        analysisId = result.data.analysis_id;
+      }
+      
+      if (!analysisId) {
+        console.error('Full result object:', JSON.stringify(result, null, 2));
+        throw new Error('No analysis ID returned from analysis result');
+      }
 
-    if (!analysisId) {
-      throw new Error('No analysis ID returned from analysis result');
-    }
+      console.log('✓ Analysis complete! Redirecting to report...');
 
-    router.push(`/report/${analysisId}`);  // ✅ CORRECT
+      // Redirect to report page with analysis_id
+      router.push(`/report/${analysisId}`);
+      
     } catch (err: any) {
       console.error('Analysis failed:', err);
       setError(
