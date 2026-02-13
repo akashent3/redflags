@@ -135,7 +135,7 @@ def _check_pat_vs_cfo(pl: list, cf: list) -> Dict:
     triggered = (pat_current > 0 and cfo_current > 0 and divergence > 30) or \
                 (pat_growth > 10 and cfo_growth < -10)
 
-    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+    return {**flag, "triggered": triggered, "confidence": 100 if triggered else 0,
             "evidence": f"PAT growth: {pat_growth:.1f}%, CFO growth: {cfo_growth:.1f}%, "
                         f"Divergence: {divergence:.1f}%. "
                         f"PAT: {fmt_b(pat_current)}, CFO: {fmt_b(cfo_current)}",
@@ -314,7 +314,7 @@ def _check_cfo_ebitda_ratio(pl: list, cf: list) -> Dict:
     ratio = cum_cfo / cum_ebitda
     triggered = ratio < 0.70
 
-    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+    return {**flag, "triggered": triggered, "confidence": 100 if triggered else 0,
             "evidence": f"3Y cumulative CFO: {fmt_b(cum_cfo)}, EBITDA: {fmt_b(cum_ebitda)}, "
                         f"Ratio: {ratio:.1%}",
             "data": {"cum_cfo": cum_cfo, "cum_ebitda": cum_ebitda, "ratio": ratio}}
@@ -512,7 +512,7 @@ def _check_debt_equity(bs: list) -> Dict:
         prev_de = prev_debt / prev_eq if prev_eq > 0 else 0
         trend = f" (prev year: {prev_de:.2f})"
 
-    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+    return {**flag, "triggered": triggered, "confidence": 100 if triggered else 0,
             "evidence": f"D/E ratio: {de_ratio:.2f}{trend}. "
                         f"Debt: {fmt_b(total_debt)}, Equity: {fmt_b(equity)}",
             "data": {"de_ratio": de_ratio, "total_debt": total_debt, "equity": equity}}
@@ -952,7 +952,7 @@ def _check_capital_adequacy(pl: list) -> Dict:
     if declining:
         evidence += " - Declining >1.5pp YoY!"
 
-    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+    return {**flag, "triggered": triggered, "confidence": 100 if triggered else 0,
             "evidence": evidence,
             "data": {"cet1": cet1, "at1": at1, "tier1": tier1,
                      "prev_tier1": prev_tier1}}

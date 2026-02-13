@@ -10,6 +10,50 @@ import { AlertTriangle, AlertCircle, Info, XCircle, ExternalLink } from 'lucide-
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
+// ADD THESE HELPER FUNCTIONS after the imports:
+
+/**
+ * Get background color based on trigger status and confidence
+ * Light red for triggered flags, light green for non-triggered
+ * Opacity varies with confidence (higher confidence = darker shade)
+ */
+const getBackgroundColor = (isTriggered: boolean, confidence: number): string => {
+  // Normalize confidence to 0-1 range
+  const normalizedConfidence = (confidence || 50) / 100;
+  
+  // Calculate opacity: 0.15 (very light) to 0.45 (darker)
+  const opacity = 0.15 + (normalizedConfidence * 0.3);
+  
+  if (isTriggered) {
+    // Light red with varying opacity - rgb(239, 68, 68) = Tailwind red-500
+    return `rgba(239, 68, 68, ${opacity})`;
+  } else {
+    // Light green with varying opacity - rgb(34, 197, 94) = Tailwind green-500
+    return `rgba(34, 197, 94, ${opacity})`;
+  }
+};
+
+/**
+ * Get border color based on trigger status
+ */
+const getBorderColor = (isTriggered: boolean): string => {
+  return isTriggered ? 'border-red-300' : 'border-green-300';
+};
+
+/**
+ * Get the symbol to display (✓ for pass, ✗ for fail)
+ */
+const getSymbol = (isTriggered: boolean): string => {
+  return isTriggered ? '✗' : '✓';
+};
+
+/**
+ * Get symbol color
+ */
+const getSymbolColor = (isTriggered: boolean): string => {
+  return isTriggered ? 'text-red-700' : 'text-green-700';
+};
+
 export interface RedFlag {
   id: string;  // ✅ UUID from backend
   flag_number: number;
@@ -76,17 +120,23 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
 
   return (
     <div
-      className={`border rounded-lg overflow-hidden transition-all ${
-        isExpanded ? `${config.border} shadow-lg` : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+      className={`border rounded-lg overflow-hidden transition-all ${getBorderColor(flag.is_triggered)} ${
+        isExpanded ? 'shadow-lg' : 'hover:shadow-md'
       }`}
+      style={{ 
+        backgroundColor: getBackgroundColor(flag.is_triggered, flag.confidence_score || 50)
+      }}
     >
       {/* Header - Always Visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full text-left p-4 ${config.bg} hover:opacity-90 transition-opacity`}
+        className="w-full text-left p-4 hover:opacity-95 transition-opacity"
       >
         <div className="flex items-start gap-3">
-          <Icon className={`h-5 w-5 ${config.color} flex-shrink-0 mt-0.5`} />
+          {/* Replace icon with ✓/✗ symbol */}
+          <span className={`text-2xl font-bold ${getSymbolColor(flag.is_triggered)} flex-shrink-0 leading-none`}>
+            {getSymbol(flag.is_triggered)}
+          </span>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 mb-2">
               <h3 className="font-semibold text-gray-900 text-sm md:text-base">
@@ -119,7 +169,12 @@ export default function RedFlagCard({ flag, expanded: initialExpanded = false }:
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="p-4 bg-white border-t border-gray-200">
+        <div 
+          className="p-4 border-t border-gray-200"
+          style={{ 
+            backgroundColor: 'white'
+          }}
+        >
           {/* Description */}
           {flag.flag_description && (
             <div className="mb-4">

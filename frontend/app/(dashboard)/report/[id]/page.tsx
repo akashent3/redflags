@@ -119,12 +119,29 @@ export default function ReportPage({ params }: ReportPageProps) {
     alert('Share functionality coming soon!');
   };
 
+  // Add this helper function at the top of the file (after imports)
+  const normalizeCategoryName = (category: string): string => {
+    // Map backend category names to display names
+    const categoryMap: Record<string, string> = {
+      'Revenue Quality': 'Revenue',
+      'Textual Analysis': 'Textual',
+      'Auditor': 'Auditor',
+      'Cash Flow': 'Cash Flow',
+      'Related Party': 'Related Party',
+      'Promoter': 'Promoter',
+      'Governance': 'Governance',
+      'Balance Sheet': 'Balance Sheet',
+    };
+    
+    return categoryMap[category] || category;
+  };
+
   // Transform category scores for spider chart
   const getCategoryScores = (): CategoryScore[] => {
     if (!analysis?.category_scores) return [];
     
     return Object.entries(analysis.category_scores).map(([category, score]) => ({
-      category,
+      category: normalizeCategoryName(category),
       score: score as number,
       fullMark: 100,
     }));
@@ -363,7 +380,7 @@ export default function ReportPage({ params }: ReportPageProps) {
             <div className="bg-white rounded-lg shadow border border-gray-200 p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Top Red Flags
+                  Top Red Flags by Severity
                 </h2>
                 <Button
                   onClick={() => setActiveTab('flags')}
@@ -374,7 +391,22 @@ export default function ReportPage({ params }: ReportPageProps) {
                 </Button>
               </div>
               <RedFlagsList
-                flags={triggeredFlags.slice(0, 3)}
+                flags={(() => {
+                  const severityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+                  return [...triggeredFlags]
+                    .sort((a, b) => {
+                      // First sort by severity
+                      const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
+                      if (severityDiff !== 0) return severityDiff;
+                      
+                      // If same severity, sort by confidence (descending)
+                      // Handle undefined confidence scores - default to 0
+                      const confidenceA = a.confidence_score ?? 0;
+                      const confidenceB = b.confidence_score ?? 0;
+                      return confidenceB - confidenceA;
+                    })
+                    .slice(0, 3);
+                })()}
                 showFilters={false}
               />
             </div>
@@ -423,6 +455,7 @@ export default function ReportPage({ params }: ReportPageProps) {
             
             return (
               <div key={cat.category} className="mb-8 last:mb-0">
+                {/* Category Header */}
                 <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900">
                     {cat.category}
@@ -436,6 +469,12 @@ export default function ReportPage({ params }: ReportPageProps) {
                     </span>
                   </div>
                 </div>
+                
+                {/* "Tests done on X Flags" heading */}
+                <h4 className="text-base font-semibold text-gray-900 mb-4">
+                  Tests done on {categoryFlags.length} Flags
+                </h4>
+
                 
                 <RedFlagsList 
                   flags={categoryFlags} 

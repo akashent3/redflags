@@ -303,7 +303,7 @@ Return your response as a valid JSON object with the exact structure shown below
 - "Except for" language in the opinion paragraph indicates qualification
 
 **FLAG 3 - Emphasis of Matter (EOM):**
-- Check for "Emphasis of Matter" or "Other Matter" paragraphs in the auditor's report
+- Check for "Emphasis of Matter" paragraphs in the auditor's report
 - These highlight important issues without qualifying the opinion
 - Look for references to contingencies, going concern, litigation, regulatory issues
 - Multiple EOM paragraphs increase severity
@@ -321,7 +321,7 @@ Return your response as a valid JSON object with the exact structure shown below
 
 **FLAG 6 - Audit Fees Unusual:**
 - Find statutory audit fees in the notes (usually under "Payments to Auditors" or similar)
-- Compare audit fees to company revenue - unusually low fees (<0.01% of revenue) may indicate inadequate audit
+- Compare audit fees to company revenue - unusually high fees (>0.5% of revenue) may indicate wrongdoing.
 - Also check for high non-audit fees relative to audit fees (independence concern)
 
 **FLAG 15 - RPT > 10% Revenue:**
@@ -352,6 +352,7 @@ Return your response as a valid JSON object with the exact structure shown below
 - Specifically search for loans/advances to directors, KMP, or their relatives
 - Check Section 185/186 of Companies Act compliance disclosures
 - Any loan to a director is a serious red flag under Indian law
+- Strictly check for loans given only not any other instruments.
 
 **FLAG 25 - Disproportionate Director Salary:**
 - Find director/KMP remuneration details (in Corporate Governance Report or Notes)
@@ -751,7 +752,7 @@ Return your response as a valid JSON object with the exact structure shown below
 - "Except for" language in the opinion paragraph indicates qualification
 
 **FLAG 3 - Emphasis of Matter (EOM):**
-- Check for "Emphasis of Matter" or "Other Matter" paragraphs in the auditor's report
+- Check for "Emphasis of Matter" paragraphs in the auditor's report
 - These highlight important issues without qualifying the opinion
 - Look for references to contingencies, going concern, litigation, regulatory issues
 - Multiple EOM paragraphs increase severity
@@ -769,7 +770,7 @@ Return your response as a valid JSON object with the exact structure shown below
 
 **FLAG 6 - Audit Fees Unusual:**
 - Find statutory audit fees in the notes (usually under "Payments to Auditors")
-- Compare audit fees to company revenue - unusually low fees (<0.01% of revenue) may indicate inadequate audit
+- Compare audit fees to company revenue - unusually high fees (>0.5% of revenue) may indicate wrongdoing.
 - Also check for high non-audit fees relative to audit fees (independence concern)
 
 **FLAG 15 - RPT > 10% Revenue:**
@@ -842,7 +843,7 @@ Return your response as a valid JSON object with the exact structure shown below
 
 **FLAG 57 - CASA Ratio Declining (BANK-SPECIFIC):**
 - Find the CASA (Current Account Savings Account) ratio disclosure
-- Usually reported in management commentary, operating metrics, or deposit breakdown
+- Usually reported in management commentary, operating metrics, deposit breakdown or presentation.
 - Check current year CASA ratio vs previous year
 - Flag if CASA ratio declined by >300 basis points (3 percentage points) YoY
 - Also flag if CASA ratio is below 30% (indicates high dependence on costly term deposits)
@@ -999,7 +1000,8 @@ def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None, is_financial_sec
         generation_config=genai.GenerationConfig(
             temperature=0.1,
             max_output_tokens=16384,
-        ),
+            timeout=300
+        )     
     )
 
     # Parse the JSON response
