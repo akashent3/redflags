@@ -1,4 +1,4 @@
-"""Gemini prompt analyzer for PDF-based red flags. Non-banks: 23 flags, Banks: 25 flags."""
+"""Gemini prompt analyzer for PDF-based red flags. Non-banks: 22 flags, Banks: 24 flags."""
 
 import google.generativeai as genai
 import json
@@ -18,7 +18,7 @@ ANALYSIS_PROMPT = """You are an expert Indian financial analyst specializing in 
 - If both consolidated and standalone are present, STRICTLY use ONLY consolidated figures.
 - State clearly at the top which type you used: "consolidated" or "standalone".
 
-Analyze this annual report and check for ALL 23 red flags listed below. For each flag, provide:
+Analyze this annual report and check for ALL 22 red flags listed below. For each flag, provide:
 1. "triggered": true/false
 2. "confidence": 0-100 (how confident you are)
 3. "evidence": specific text/numbers from the report supporting your finding
@@ -54,7 +54,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Emphasis of Matter",
       "category": "Auditor",
       "severity": "MEDIUM",
-      "rule": "Auditor included Emphasis of Matter or Other Matter paragraphs highlighting concerns",
+      "rule": "Auditor included Emphasis of Matter paragraph highlighting concerns",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -71,23 +71,12 @@ Return your response as a valid JSON object with the exact structure shown below
       "evidence": "explanation",
       "details": ""
     },
-    "kam_revenue": {
-      "flag_number": 5,
-      "flag_name": "KAM Revenue Recognition",
-      "category": "Auditor",
-      "severity": "HIGH",
-      "rule": "Revenue recognition listed as a Key Audit Matter (high risk area per auditor)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
     "audit_fees": {
       "flag_number": 6,
       "flag_name": "Audit Fees Unusual",
       "category": "Auditor",
-      "severity": "LOW",
-      "rule": "Audit fees unusually low (<0.01% of revenue) or non-audit fees exceed audit fees",
+      "severity": "MEDIUM",
+      "rule": "Audit fees unusually HIGH (>0.5% of revenue) or non-audit fees exceed audit fees",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -303,26 +292,26 @@ Return your response as a valid JSON object with the exact structure shown below
 - "Except for" language in the opinion paragraph indicates qualification
 
 **FLAG 3 - Emphasis of Matter (EOM):**
-- Check for "Emphasis of Matter" paragraphs in the auditor's report
+- Check ONLY for "Emphasis of Matter" paragraphs in the auditor's report
+- DO NOT consider "Other Matter" paragraphs - ONLY "Emphasis of Matter"
 - These highlight important issues without qualifying the opinion
 - Look for references to contingencies, going concern, litigation, regulatory issues
 - Multiple EOM paragraphs increase severity
+- Note: "Other Matter" sections should be IGNORED for this flag
 
 **FLAG 4 - Going Concern Doubt:**
 - Search for "going concern", "material uncertainty", "ability to continue as a going concern"
 - Check both auditor's report and notes to financial statements
 - Also check for "accumulated losses exceed net worth" or similar language
 
-**FLAG 5 - KAM Revenue Recognition:**
-- Look in the "Key Audit Matters" section of the auditor's report
-- Check if "Revenue Recognition" or "Revenue from Operations" is listed as a KAM
-- This suggests the auditor found revenue recognition to be a high-risk area
-- Note the specific reason the auditor flagged it
-
 **FLAG 6 - Audit Fees Unusual:**
 - Find statutory audit fees in the notes (usually under "Payments to Auditors" or similar)
-- Compare audit fees to company revenue - unusually high fees (>0.5% of revenue) may indicate wrongdoing.
-- Also check for high non-audit fees relative to audit fees (independence concern)
+- Calculate: (Audit Fees / Revenue) * 100 to get percentage
+- Compare audit fees to company revenue - unusually HIGH fees (>0.5% of revenue) may indicate complex audit or concerns
+- Flag if audit fees exceed 0.5% of total revenue from operations
+- Also check for high non-audit fees relative to audit fees (independence concern - flag if non-audit fees > audit fees)
+- Example: If revenue is ₹1,000 crore and audit fees are ₹6 crore, that's 0.6% → FLAG IT
+- Example: If revenue is ₹1,000 crore and audit fees are ₹4 crore, that's 0.4% → DO NOT FLAG
 
 **FLAG 15 - RPT > 10% Revenue:**
 - Find the Related Party Transactions disclosure (Note/Schedule)
@@ -430,7 +419,7 @@ Return your response as a valid JSON object with the exact structure shown below
 **FLAG 51 - JV/Associate Loss Hiding:**
 - Check for investments in joint ventures and associates in the Notes
 - Look for share of profit/loss from associates and JVs in the P&L
-- Flag if: (a) JVs/associates have reported losses for 2+ consecutive years, (b) significant impairment/write-down of JV/associate investments, or (c) company's share of JV/associate losses exceeds 5% of consolidated profit
+- Flag if: (a) JVs/associates have reported losses for 2+ consecutive years, (b) significant impairment/write-down of JV/associate investments, or (c) company's share of JV/associate losses exceeds 5% of PAT
 - Persistent losses in JVs/associates suggest potential loss-parking in off-balance-sheet entities
 
 Remember: Return ONLY the JSON object, no other text. Be precise and cite specific page numbers, amounts, or quotes from the report where possible.
@@ -445,7 +434,7 @@ ANALYSIS_PROMPT_BANK = """You are an expert Indian financial analyst specializin
 - If both consolidated and standalone are present, STRICTLY use ONLY consolidated figures.
 - State clearly at the top which type you used: "consolidated" or "standalone".
 
-Analyze this annual report and check for ALL 25 red flags listed below. For each flag, provide:
+Analyze this annual report and check for ALL 24 red flags listed below. For each flag, provide:
 1. "triggered": true/false
 2. "confidence": 0-100 (how confident you are)
 3. "evidence": specific text/numbers from the report supporting your finding
@@ -481,7 +470,7 @@ Return your response as a valid JSON object with the exact structure shown below
       "flag_name": "Emphasis of Matter",
       "category": "Auditor",
       "severity": "MEDIUM",
-      "rule": "Auditor included Emphasis of Matter or Other Matter paragraphs highlighting concerns",
+      "rule": "Auditor included Emphasis of Matter paragraph highlighting concerns",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -498,23 +487,12 @@ Return your response as a valid JSON object with the exact structure shown below
       "evidence": "explanation",
       "details": ""
     },
-    "kam_revenue": {
-      "flag_number": 5,
-      "flag_name": "KAM Revenue/Interest Income Recognition",
-      "category": "Auditor",
-      "severity": "HIGH",
-      "rule": "Revenue or interest income recognition listed as a Key Audit Matter",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
     "audit_fees": {
       "flag_number": 6,
       "flag_name": "Audit Fees Unusual",
       "category": "Auditor",
-      "severity": "LOW",
-      "rule": "Audit fees unusually low (<0.01% of revenue) or non-audit fees exceed audit fees",
+      "severity": "MEDIUM",
+      "rule": "Audit fees unusually HIGH (>0.5% of revenue) or non-audit fees exceed audit fees",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -752,26 +730,26 @@ Return your response as a valid JSON object with the exact structure shown below
 - "Except for" language in the opinion paragraph indicates qualification
 
 **FLAG 3 - Emphasis of Matter (EOM):**
-- Check for "Emphasis of Matter" paragraphs in the auditor's report
+- Check ONLY for "Emphasis of Matter" paragraphs in the auditor's report
+- DO NOT consider "Other Matter" paragraphs - ONLY "Emphasis of Matter"
 - These highlight important issues without qualifying the opinion
 - Look for references to contingencies, going concern, litigation, regulatory issues
 - Multiple EOM paragraphs increase severity
+- Note: "Other Matter" sections should be IGNORED for this flag
 
 **FLAG 4 - Going Concern Doubt:**
 - Search for "going concern", "material uncertainty", "ability to continue as a going concern"
 - Check both auditor's report and notes to financial statements
 - Also check for "accumulated losses exceed net worth" or similar language
 
-**FLAG 5 - KAM Revenue/Interest Income Recognition:**
-- Look in the "Key Audit Matters" section of the auditor's report
-- Check if "Revenue Recognition", "Interest Income", or "Advances Classification" is listed as a KAM
-- For banks, also check if NPA classification or provision adequacy is a KAM
-- Note the specific reason the auditor flagged it
-
 **FLAG 6 - Audit Fees Unusual:**
 - Find statutory audit fees in the notes (usually under "Payments to Auditors")
-- Compare audit fees to company revenue - unusually high fees (>0.5% of revenue) may indicate wrongdoing.
-- Also check for high non-audit fees relative to audit fees (independence concern)
+- Calculate: (Audit Fees / Revenue) * 100 to get percentage
+- Compare audit fees to company revenue - unusually HIGH fees (>0.5% of revenue) may indicate complex audit or concerns
+- Flag if audit fees exceed 0.5% of total revenue from operations
+- Also check for high non-audit fees relative to audit fees (independence concern - flag if non-audit fees > audit fees)
+- Example: If revenue is ₹1,000 crore and audit fees are ₹6 crore, that's 0.6% → FLAG IT
+- Example: If revenue is ₹1,000 crore and audit fees are ₹4 crore, that's 0.4% → DO NOT FLAG
 
 **FLAG 15 - RPT > 10% Revenue:**
 - Find the Related Party Transactions disclosure (Note/Schedule)
@@ -971,7 +949,7 @@ def _fix_truncated_json(json_str: str) -> str:
 
 
 def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None, is_financial_sector: bool = False) -> Dict:
-    """Analyze an annual report PDF using Gemini. Non-banks: 23 flags, Banks: 25 flags.
+    """Analyze an annual report PDF using Gemini. Non-banks: 22 flags, Banks: 24 flags.
 
     Args:
         pdf_path: Path to the annual report PDF file
@@ -991,7 +969,7 @@ def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None, is_financial_sec
     pdf_file = genai.upload_file(pdf_path, mime_type="application/pdf")
     logger.info(f"PDF uploaded successfully: {pdf_file.name}")
 
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-pro")
 
     prompt = ANALYSIS_PROMPT_BANK if is_financial_sector else ANALYSIS_PROMPT
     logger.info(f"Sending analysis request to Gemini ({'bank' if is_financial_sector else 'non-bank'} prompt)...")

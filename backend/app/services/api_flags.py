@@ -331,7 +331,7 @@ def _check_cash_yield(bs: list, cf: list) -> Dict:
 
     cash = safe_get(bs[0], "cashAndCashEquivalents")
     total_assets = safe_get(bs[0], "assets")
-    interest_received = safe_get(cf[0], "interestReceivedClassifiedAsOperating")
+    interest_received = safe_get(cf[0], "interestReceivedClassifiedAsInvesting")
 
     if total_assets <= 0:
         return {**flag, "triggered": False, "reason": "No asset data"}
@@ -673,7 +673,7 @@ def _check_implied_interest_rate(bs: list, cf: list) -> Dict:
     if len(bs) < 2 or len(cf) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years BS + 1 year CF)"}
 
-    interest_paid = abs(safe_get(cf[0], "interestPaidClassifiedAsOperating"))
+    interest_paid = abs(safe_get(cf[0], "interestPaidClassifiedAsFinancing"))
 
     debt_current = safe_get(bs[0], "borrowingsNoncurrent") + safe_get(bs[0], "borrowingsCurrent")
     debt_prev = safe_get(bs[1], "borrowingsNoncurrent") + safe_get(bs[1], "borrowingsCurrent")
