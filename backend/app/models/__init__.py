@@ -8,6 +8,7 @@ from app.models.analysis_result import AnalysisResult
 from app.models.red_flag import RedFlag, FlagSeverity, FlagCategory
 from app.models.watchlist import WatchlistItem, WatchlistAlert, NotificationPreference
 from app.models.portfolio import Portfolio, Holding
+from app.models.fraud_case import FraudCase
 
 # Export all models
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "NotificationPreference",
     "Portfolio",
     "Holding",
+    "FraudCase",
 ]

@@ -298,10 +298,11 @@ async def delete_report(
                 detail=f"Report not found: {report_id}",
             )
 
-        # Extract object key from PDF URL
-        # URL format: https://r2.domain.com/reports/2023/Company_2023_uuid.pdf
+        # Extract object key by stripping the public base URL
         pdf_url = report.pdf_url
-        object_key = pdf_url.split("/", 3)[-1]  # Get everything after domain
+        from app.config import settings
+        base = settings.r2_public_url.rstrip("/")
+        object_key = pdf_url[len(base):].lstrip("/")
 
         # Delete from R2
         try:

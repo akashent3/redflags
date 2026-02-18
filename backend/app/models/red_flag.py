@@ -41,7 +41,7 @@ class RedFlag(Base):
     analysis_id = Column(UUID(as_uuid=True), ForeignKey('analysis_results.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # Flag Identification
-    flag_number = Column(Integer, nullable=False)  # 1-54
+    flag_number = Column(Integer, nullable=False)  # 1-60
     flag_name = Column(String(255), nullable=False)
     flag_description = Column(Text, nullable=True)
 

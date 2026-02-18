@@ -120,7 +120,7 @@ def generate_user_data_export(user_id: str):
                     analyses_data.append({
                         'company_name': analysis.report.company.name if analysis.report.company else 'N/A',
                         'fiscal_year': analysis.report.fiscal_year,
-                        'risk_score': analysis.overall_risk_score,
+                        'risk_score': analysis.risk_score,
                         'risk_level': analysis.risk_level,
                         'flags_triggered': analysis.flags_triggered_count,
                         'analyzed_at': analysis.analyzed_at.isoformat() if analysis.analyzed_at else None,

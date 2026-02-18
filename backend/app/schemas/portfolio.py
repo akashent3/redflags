@@ -22,6 +22,14 @@ class PortfolioCreate(BaseModel):
     holdings: List[HoldingCreate] = Field(..., min_items=1, description="List of holdings from CSV")
 
 
+class AddHoldingRequest(BaseModel):
+    """Request to manually add a single holding to a portfolio."""
+    company_id: str = Field(..., description="Company UUID to add")
+    symbol: str = Field(..., description="NSE/BSE symbol")
+    quantity: int = Field(..., gt=0, description="Number of shares (must be > 0)")
+    avg_price: float = Field(..., gt=0, description="Average purchase price (must be > 0)")
+
+
 # Response schemas
 class HoldingResponse(BaseModel):
     """Individual holding response."""
@@ -34,9 +42,24 @@ class HoldingResponse(BaseModel):
     risk_score: Optional[int] = Field(None, description="Risk score from latest analysis")
     risk_level: Optional[str] = Field(None, description="Risk level: LOW, MEDIUM, HIGH, CRITICAL")
     flags_count: Optional[int] = Field(None, description="Number of red flags")
+    latest_analysis_id: Optional[str] = Field(None, description="ID of latest analysis report for View Report link")
+
+    # Real-time price data (fetched on page load)
+    current_price: Optional[float] = Field(None, description="Current market price")
+    current_value: Optional[float] = Field(None, description="Current total value (quantity * current_price)")
+    pnl: Optional[float] = Field(None, description="Profit/Loss amount")
+    pnl_percent: Optional[float] = Field(None, description="Profit/Loss percentage")
+    price_change: Optional[float] = Field(None, description="Price change (absolute)")
+    price_change_percent: Optional[float] = Field(None, description="Price change percentage")
 
     class Config:
         from_attributes = True
+
+
+class AddHoldingResponse(BaseModel):
+    """Response after adding a single holding."""
+    holding: HoldingResponse = Field(..., description="The newly created holding with live price data")
+    analysis_triggered: bool = Field(..., description="Whether a new analysis was triggered")
 
 
 class PortfolioResponse(BaseModel):

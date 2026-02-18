@@ -30,7 +30,7 @@ class NotificationPreferencesUpdate(BaseModel):
 
 # Response schemas
 class WatchlistItemResponse(BaseModel):
-    """Watchlist item response."""
+    """Watchlist item response with real-time price data."""
     watchlist_id: UUID = Field(..., description="Watchlist item ID")
     company_id: UUID = Field(..., description="Company ID")
     symbol: str = Field(..., description="Company symbol")
@@ -44,6 +44,16 @@ class WatchlistItemResponse(BaseModel):
     last_analysis_date: Optional[datetime] = Field(None, description="Last analysis date")
     added_date: datetime = Field(..., description="Date added to watchlist")
     alert_enabled: bool = Field(..., description="Alerts enabled")
+    
+    # Real-time price data (NEW)
+    current_price: Optional[float] = Field(None, description="Current market price")
+    price_change: Optional[float] = Field(None, description="Price change (absolute)")
+    price_change_percent: Optional[float] = Field(None, description="Price change (%)")
+    high: Optional[float] = Field(None, description="Day high")
+    low: Optional[float] = Field(None, description="Day low")
+    volume: Optional[int] = Field(None, description="Trading volume")
+    auto_analysis_triggered: bool = Field(False, description="Whether analysis was auto-triggered")
+    latest_analysis_id: Optional[UUID] = Field(None, description="Latest analysis result ID for report navigation")
 
     class Config:
         from_attributes = True
@@ -72,8 +82,7 @@ class WatchlistResponse(BaseModel):
     """Complete watchlist response."""
     user_id: UUID = Field(..., description="User ID")
     items: List[WatchlistItemResponse] = Field(..., description="Watchlist items")
-    total_watched: int = Field(..., description="Total watched companies")
-    recent_alerts: List[WatchlistAlertResponse] = Field(..., description="Recent alerts")
+    alerts: List[WatchlistAlertResponse] = Field(..., description="Recent alerts")
 
     class Config:
         from_attributes = True
@@ -81,14 +90,12 @@ class WatchlistResponse(BaseModel):
 
 class NotificationPreferencesResponse(BaseModel):
     """Notification preferences response."""
-    user_id: UUID = Field(..., description="User ID")
-    email_alerts_enabled: bool = Field(..., description="Email alerts enabled")
-    weekly_digest_enabled: bool = Field(..., description="Weekly digest enabled")
-    feature_announcements_enabled: bool = Field(..., description="Feature announcements enabled")
-    push_notifications_enabled: bool = Field(..., description="Push notifications enabled")
-    alert_frequency: str = Field(..., description="Alert frequency")
-    created_at: datetime = Field(..., description="Created at")
-    updated_at: datetime = Field(..., description="Updated at")
+    user_id: UUID
+    email_alerts_enabled: bool
+    weekly_digest_enabled: bool
+    feature_announcements_enabled: bool
+    push_notifications_enabled: bool
+    alert_frequency: str
 
     class Config:
         from_attributes = True

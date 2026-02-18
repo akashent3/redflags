@@ -83,16 +83,36 @@ class AnalysisServiceV2:
             if company_symbol:
                 logger.info(f"Step 1/3: Fetching financial data from FinEdge API for {company_symbol}")
                 try:
-                    finedge_data = finedge_client.fetch_all_data(company_symbol)
+                    # First fetch profile only to determine sector (needed to pick correct statement type)
+                    try:
+                        profile_data = finedge_client.get_company_profile(company_symbol)
+                    except Exception:
+                        profile_data = {}
 
-                    # Determine if company is in financial sector
-                    profile = finedge_data.get("profile", {})
-                    industry = profile.get("industry", "").lower()
+                    industry = profile_data.get("industry", "").lower()
+                    sector = profile_data.get("sector", "").lower()
                     is_financial_sector = any(
-                        term in industry for term in ["bank", "nbfc", "financial services", "finance"]
+                        term in industry or term in sector
+                        for term in ["bank", "nbfc", "financial services", "finance"]
                     )
 
-                    logger.info(f"Company industry: {industry}, is_financial_sector: {is_financial_sector}")
+                    logger.info(
+                        f"Company sector: '{sector}', industry: '{industry}', "
+                        f"is_financial_sector: {is_financial_sector}"
+                    )
+
+                    # Fetch all financials — banks always get standalone, others auto-detect
+                    finedge_data = finedge_client.fetch_all_data(
+                        company_symbol,
+                        is_financial_sector=is_financial_sector
+                    )
+                    finedge_data["profile"] = profile_data  # reuse the already-fetched profile
+
+                    # Log statement type used
+                    statement_type = finedge_data.get("statement_type", "unknown")
+                    logger.info(
+                        f"Statement type used for {company_symbol}: {statement_type}"
+                    )
 
                     # Calculate API flags
                     api_flags = calculate_api_flags(finedge_data, is_financial_sector)

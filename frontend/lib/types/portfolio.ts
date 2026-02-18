@@ -3,6 +3,7 @@
  */
 
 export interface Holding {
+  holding_id: string;
   symbol: string;
   company_name: string;
   quantity: number;
@@ -12,9 +13,12 @@ export interface Holding {
   current_value?: number;
   pnl?: number;
   pnl_percent?: number;
+  price_change?: number;
+  price_change_percent?: number;
   risk_score?: number;
-  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  risk_level?: string;
   flags_count?: number;
+  latest_analysis_id?: string;
   last_analyzed?: string;
 }
 
@@ -22,11 +26,12 @@ export interface Portfolio {
   portfolio_id: string;
   user_id: string;
   name: string;
+  description?: string;
   holdings: Holding[];
   total_investment: number;
   total_current_value?: number;
   total_pnl?: number;
-  average_risk_score: number;
+  average_risk_score?: number;
   high_risk_count: number;
   created_at: string;
   updated_at: string;

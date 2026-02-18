@@ -83,9 +83,11 @@ def analyze_report_task(self, report_id: str) -> dict:
         report.is_processed = "processing"
         self.db.commit()
 
-        # Extract object key from PDF URL
+        # Extract object key from PDF URL by stripping the public base URL
         pdf_url = report.pdf_url
-        object_key = pdf_url.split("/", 3)[-1]
+        from app.config import settings
+        base = settings.r2_public_url.rstrip("/")
+        object_key = pdf_url[len(base):].lstrip("/")
 
         # Update state
         self.update_state(state="PROGRESS", meta={"status": "Downloading PDF", "progress": 10})
@@ -293,7 +295,9 @@ def analyze_company_by_symbol_task(self, symbol: str, user_id: str) -> dict:
             self.update_state(state="PROGRESS", meta={"status": "Downloading PDF from storage", "progress": 30})
             
             try:
-                object_key = existing_report.pdf_url.split("/", 3)[-1]
+                from app.config import settings
+                base = settings.r2_public_url.rstrip("/")
+                object_key = existing_report.pdf_url[len(base):].lstrip("/")
                 pdf_bytes = self.r2_client.download_file(object_key)
                 logger.info(f"Downloaded from R2: {len(pdf_bytes)} bytes")
             except Exception as e:

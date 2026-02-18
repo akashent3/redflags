@@ -249,6 +249,144 @@ async def get_company_reports(
 
 
 @router.get(
+    "/{company_id}/latest-analysis",
+    summary="Get latest analysis for company",
+    description="Get the latest analysis result for a company if it exists.",
+)
+async def get_latest_analysis(
+    company_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get latest analysis for a company.
+
+    **Path Parameters:**
+    - `company_id`: Company UUID
+
+    **Returns:**
+    - If analysis exists: { analysis_id, risk_score, risk_level, created_at }
+    - If no analysis: { analysis_id: null }
+
+    **Use Case:**
+    - Watchlist: Check if analysis exists before redirecting or triggering new analysis
+    - Portfolio: Check if risk scores are available
+    """
+    try:
+        from app.models.analysis_result import AnalysisResult
+
+        # Verify company exists
+        company = company_service.get_company_by_id(db, company_id)
+        if not company:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Company not found: {company_id}"
+            )
+
+        # Get latest analysis — join via AnnualReport (AnalysisResult has no direct company_id)
+        from app.models.annual_report import AnnualReport
+        latest_analysis = db.query(AnalysisResult).join(
+            AnnualReport, AnalysisResult.report_id == AnnualReport.id
+        ).filter(
+            AnnualReport.company_id == company_id
+        ).order_by(AnalysisResult.created_at.desc()).first()
+
+        if latest_analysis:
+            annual_report = db.query(AnnualReport).filter(AnnualReport.id == latest_analysis.report_id).first()
+            return {
+                "analysis_id": latest_analysis.id,
+                "risk_score": latest_analysis.risk_score,
+                "risk_level": latest_analysis.risk_level,
+                "created_at": latest_analysis.created_at,
+                "fiscal_year": annual_report.fiscal_year if annual_report else None,
+            }
+        else:
+            return {
+                "analysis_id": None,
+                "message": "No analysis available for this company"
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting latest analysis for company {company_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get latest analysis: {str(e)}"
+        )
+
+
+@router.post(
+    "/ensure-by-symbol",
+    summary="Ensure company exists in DB by symbol",
+    description="Look up or create a company record by NSE symbol. Used when adding from FinEdge search.",
+)
+async def ensure_company_by_symbol(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Given a symbol from FinEdge search, ensure the company exists in local DB.
+
+    - If company already in DB → return existing UUID immediately
+    - If not in DB → create minimal record from provided FinEdge data → return new UUID
+
+    Frontend calls this before POST /watchlist/ or POST /portfolio/{id}/holdings
+    so those endpoints always receive a valid company_id UUID.
+    """
+    from app.models.company import Company as CompanyModel
+
+    symbol = (body.get("symbol") or "").strip().upper()
+    if not symbol:
+        raise HTTPException(status_code=400, detail="symbol is required")
+
+    name     = body.get("name") or symbol
+    sector   = body.get("sector") or None
+    industry = body.get("industry") or None
+
+    # Check existing by nse_symbol or bse_code
+    company = db.query(CompanyModel).filter(
+        (CompanyModel.nse_symbol == symbol) | (CompanyModel.bse_code == symbol)
+    ).first()
+
+    created = False
+    if not company:
+        # Try to enrich from FinEdge profile (best-effort — never fail because of this)
+        try:
+            profile = finedge_client.get_company_profile(symbol)
+            name     = profile.get("name") or name
+            sector   = profile.get("sector") or sector
+            industry = profile.get("industry") or industry
+        except Exception:
+            pass  # Use whatever the frontend passed
+
+        company = CompanyModel(
+            name=name,
+            nse_symbol=symbol,
+            sector=sector,
+            industry=industry,
+            is_active=True,
+        )
+        db.add(company)
+        db.commit()
+        db.refresh(company)
+        created = True
+        logger.info(f"Created new company record for {symbol}: {company.id}")
+    else:
+        logger.info(f"Found existing company record for {symbol}: {company.id}")
+
+    return {
+        "company_id": str(company.id),
+        "symbol": company.nse_symbol or company.bse_code or symbol,
+        "name": company.name,
+        "sector": company.sector,
+        "industry": company.industry,
+        "created": created,
+    }
+
+
+@router.get(
     "/finedge/search",
     summary="Search companies via FinEdge API",
     description="Live search for companies using FinEdge API. Returns NSE/BSE listed companies.",

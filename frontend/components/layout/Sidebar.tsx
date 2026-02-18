@@ -7,6 +7,7 @@
  */
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
   Eye,
   GraduationCap,
   Settings,
+  Shield,
   X,
 } from 'lucide-react';
 
@@ -23,44 +25,73 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const navItems = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    description: 'Overview and stats',
-  },
-  {
-    name: 'Analyze',
-    href: '/analyze',
-    icon: FileSearch,
-    description: 'Upload or search reports',
-  },
-  {
-    name: 'Portfolio',
-    href: '/portfolio',
-    icon: Briefcase,
-    description: 'Bulk portfolio scanner',
-  },
-  {
-    name: 'Watchlist',
-    href: '/watchlist',
-    icon: Eye,
-    description: 'Track companies',
-  },
-  {
-    name: 'Learn',
-    href: '/learn',
-    icon: GraduationCap,
-    description: 'Fraud database',
-  },
-  {
-    name: 'Settings',
-    href: '/settings',
-    icon: Settings,
-    description: 'Account settings',
-  },
-];
+// Check if user is admin (from localStorage)
+const isAdmin = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      return userData.is_admin === true;
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
+};
+
+const getNavItems = () => {
+  const baseItems = [
+    {
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: LayoutDashboard,
+      description: 'Overview and stats',
+    },
+    {
+      name: 'Analyze',
+      href: '/analyze',
+      icon: FileSearch,
+      description: 'Upload or search reports',
+    },
+    {
+      name: 'Portfolio',
+      href: '/portfolio',
+      icon: Briefcase,
+      description: 'Bulk portfolio scanner',
+    },
+    {
+      name: 'Watchlist',
+      href: '/watchlist',
+      icon: Eye,
+      description: 'Track companies',
+    },
+    {
+      name: 'Learn',
+      href: '/learn',
+      icon: GraduationCap,
+      description: 'Fraud database',
+    },
+    {
+      name: 'Settings',
+      href: '/settings',
+      icon: Settings,
+      description: 'Account settings',
+    },
+  ];
+
+  // Add admin item if user is admin
+  if (isAdmin()) {
+    baseItems.push({
+      name: 'Admin',
+      href: '/admin',
+      icon: Shield,
+      description: 'System administration',
+    });
+  }
+
+  return baseItems;
+};
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
@@ -87,7 +118,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Mobile Close Button */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
-            <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+            <Image
+              src="/logo.png"
+              alt="RedFlag AI"
+              width={130}
+              height={36}
+              className="h-9 w-auto object-contain"
+              priority
+            />
             <button
               onClick={onClose}
               className="p-2 rounded-md hover:bg-gray-100"
@@ -98,9 +136,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* Navigation Links */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
+            {getNavItems().map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
 
               return (
                 <Link

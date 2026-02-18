@@ -64,6 +64,7 @@ class Holding(Base):
     risk_score = Column(Integer, nullable=True)
     risk_level = Column(String(20), nullable=True)  # LOW, MEDIUM, HIGH, CRITICAL
     flags_count = Column(Integer, nullable=True)
+    latest_analysis_id = Column(String(36), nullable=True)  # UUID of latest AnalysisResult for View Report link
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

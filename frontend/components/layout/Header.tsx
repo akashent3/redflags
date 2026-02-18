@@ -8,12 +8,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
-  Shield,
-  Search,
   Bell,
   User,
   LogOut,
@@ -58,26 +57,16 @@ export default function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
             </button>
 
             {/* Logo */}
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-blue-600" />
-              <span className="hidden sm:block text-xl font-bold text-gray-900">
-                RedFlag AI
-              </span>
-            </Link>
-          </div>
-
-          {/* Center Section: Search (hidden on mobile) */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search companies (e.g., Reliance, TCS)..."
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            <Link href="/dashboard" className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="RedFlag AI"
+                width={160}
+                height={44}
+                className="h-11 w-auto object-contain"
+                priority
               />
-            </div>
+            </Link>
           </div>
 
           {/* Right Section: Notifications + User Menu */}
@@ -198,19 +187,6 @@ export default function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
           </div>
         </div>
 
-        {/* Mobile Search */}
-        <div className="md:hidden pb-3">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search companies..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
-          </div>
-        </div>
       </div>
     </header>
   );

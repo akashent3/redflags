@@ -42,7 +42,7 @@ class FlagRegistry:
         Get a specific flag by number.
 
         Args:
-            flag_number: Flag number (1-54)
+            flag_number: Flag number (1-60)
 
         Returns:
             RedFlagBase instance or None if not found

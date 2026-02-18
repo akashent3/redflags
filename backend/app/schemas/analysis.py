@@ -32,7 +32,7 @@ class RedFlagResponse(BaseModel):
     """Response schema for individual red flag details."""
 
     id: UUID
-    flag_number: int = Field(..., ge=1, le=54, description="Flag number (1-54)")
+    flag_number: int = Field(..., ge=1, le=200, description="Flag number (1-60 non-bank, 101-132 bank/NBFC)")
     flag_name: str = Field(..., description="Short name of the red flag")
     flag_description: Optional[str] = Field(None, description="Detailed description of the flag")
     category: str = Field(..., description="Category (Auditor, Cash Flow, etc.)")

@@ -1,244 +1,321 @@
-"""Fraud cases API endpoints."""
+"""Fraud cases API endpoints for pattern matching and fraud database."""
 
-import json
 import logging
-from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import get_db
+from app.models.user import User
+from app.models.fraud_case import FraudCase
 from app.models.analysis_result import AnalysisResult
+from app.models.company import Company
+from app.utils.dependencies import get_current_active_user
+from app.schemas.fraud_case import (
+    FraudCaseListResponse,
+    FraudCaseResponse,
+    PatternMatchResponse,
+    PatternMatchResult,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Load fraud cases from JSON file
-FRAUD_CASES_FILE = Path(__file__).parent.parent.parent / "data" / "fraud_cases.json"
-
-
-def load_fraud_cases():
-    """Load fraud cases from JSON file."""
-    try:
-        with open(FRAUD_CASES_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        logger.error(f"Failed to load fraud cases: {e}")
-        return {"cases": [], "patterns": []}
-
-
-FRAUD_DATA = load_fraud_cases()
-
 
 @router.get(
     "/",
-    summary="Get fraud cases",
-    description="Get fraud cases with optional filtering and pagination.",
+    response_model=FraudCaseListResponse,
+    summary="Get all fraud cases",
+    description="Get list of all historical fraud cases in the database.",
 )
 async def get_fraud_cases(
-    sector: Optional[str] = Query(None, description="Filter by sector"),
-    search: Optional[str] = Query(None, description="Search in company name or industry"),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(20, ge=1, le=100, description="Maximum number of records"),
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of results"),
+    fraud_type: str = Query(None, description="Filter by fraud type"),
+    sector: str = Query(None, description="Filter by sector"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Get fraud cases with filtering."""
+    """Get all fraud cases from database with optional filtering."""
     try:
-        cases = FRAUD_DATA.get('cases', [])
+        query = db.query(FraudCase)
 
         # Apply filters
+        if fraud_type:
+            query = query.filter(FraudCase.fraud_type.ilike(f"%{fraud_type}%"))
         if sector:
-            cases = [c for c in cases if c.get('sector', '').lower() == sector.lower()]
+            query = query.filter(FraudCase.sector.ilike(f"%{sector}%"))
 
-        if search:
-            search_lower = search.lower()
-            cases = [
-                c for c in cases
-                if search_lower in c.get('company_name', '').lower() or
-                search_lower in c.get('industry', '').lower()
-            ]
+        # Get total count
+        total = query.count()
 
-        # Pagination
-        total = len(cases)
-        cases = cases[skip:skip + limit]
+        # Get paginated results
+        fraud_cases = query.order_by(FraudCase.year.desc()).offset(skip).limit(limit).all()
 
-        return {
-            "total": total,
-            "skip": skip,
-            "limit": limit,
-            "cases": cases,
-        }
+        # Convert to response schema — include all JSONB fields needed by Learn page
+        case_responses = [
+            FraudCaseResponse(
+                id=case.id,
+                case_id=case.case_id,
+                company_name=case.company_name,
+                year=case.year,
+                sector=case.sector,
+                industry=case.industry,
+                fraud_type=case.fraud_type,
+                detection_difficulty=case.detection_difficulty,
+                stock_decline_percent=float(case.stock_decline_percent) if case.stock_decline_percent else None,
+                market_cap_lost_cr=float(case.market_cap_lost_cr) if case.market_cap_lost_cr else None,
+                primary_flags=case.primary_flags,
+                red_flags_detected=case.red_flags_detected,
+                timeline=case.timeline,
+                what_investors_missed=case.what_investors_missed,
+                lessons_learned=case.lessons_learned,
+                outcome=case.outcome,
+                regulatory_action=case.regulatory_action,
+                created_at=case.created_at,
+            )
+            for case in fraud_cases
+        ]
+
+        return FraudCaseListResponse(
+            total=total,
+            cases=case_responses
+        )
 
     except Exception as e:
         logger.error(f"Error fetching fraud cases: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch fraud cases"
+            detail=f"Failed to fetch fraud cases: {str(e)}"
         )
 
 
 @router.get(
     "/{case_id}",
+    response_model=FraudCaseResponse,
     summary="Get fraud case details",
     description="Get detailed information about a specific fraud case.",
 )
-async def get_fraud_case_detail(case_id: str):
-    """Get detailed fraud case."""
+async def get_fraud_case(
+    case_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get fraud case details by case_id."""
     try:
-        cases = FRAUD_DATA.get('cases', [])
-        case = next((c for c in cases if c.get('case_id') == case_id), None)
+        fraud_case = db.query(FraudCase).filter(FraudCase.case_id == case_id).first()
 
-        if not case:
+        if not fraud_case:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Fraud case not found: {case_id}"
             )
 
-        return case
+        return FraudCaseResponse(
+            id=fraud_case.id,
+            case_id=fraud_case.case_id,
+            company_name=fraud_case.company_name,
+            year=fraud_case.year,
+            sector=fraud_case.sector,
+            industry=fraud_case.industry,
+            fraud_type=fraud_case.fraud_type,
+            detection_difficulty=fraud_case.detection_difficulty,
+            stock_decline_percent=float(fraud_case.stock_decline_percent) if fraud_case.stock_decline_percent else None,
+            market_cap_lost_cr=float(fraud_case.market_cap_lost_cr) if fraud_case.market_cap_lost_cr else None,
+            primary_flags=fraud_case.primary_flags,
+            red_flags_detected=fraud_case.red_flags_detected,
+            timeline=fraud_case.timeline,
+            what_investors_missed=fraud_case.what_investors_missed,
+            lessons_learned=fraud_case.lessons_learned,
+            outcome=fraud_case.outcome,
+            regulatory_action=fraud_case.regulatory_action,
+            created_at=fraud_case.created_at,
+        )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching fraud case detail: {e}", exc_info=True)
+        logger.error(f"Error fetching fraud case {case_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch fraud case details"
+            detail=f"Failed to fetch fraud case: {str(e)}"
         )
 
 
 @router.post(
-    "/pattern-match",
-    summary="Match fraud patterns",
-    description="Match company's red flags against historical fraud patterns.",
+    "/pattern-match/{analysis_id}",
+    response_model=PatternMatchResponse,
+    summary="Pattern match analysis against fraud cases",
+    description="Analyze similarity between company's red flags and historical fraud cases.",
 )
-async def match_fraud_patterns(company_id: str):
+async def pattern_match_analysis(
+    analysis_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
-    Match company's red flags against historical fraud patterns.
+    Pattern match analysis against historical fraud cases using Jaccard similarity.
 
-    Algorithm:
-    1. Fetch company's latest analysis
-    2. Get list of triggered red flags
-    3. For each fraud pattern, count matching flags
-    4. Calculate similarity score
-    5. Return matches with similarity >= 50%
+    **Algorithm:**
+    - Uses Jaccard similarity: (intersection / union) * 100
+    - Threshold: 30% minimum for matches
+    - Risk levels: <30% = LOW, 30-50% = MEDIUM, 50-70% = HIGH, >70% = CRITICAL
     """
-    db = SessionLocal()
     try:
-        # Get latest analysis
+        # Step 1: Get analysis
         analysis = db.query(AnalysisResult).filter(
-            AnalysisResult.company_id == UUID(company_id)
-        ).order_by(AnalysisResult.created_at.desc()).first()
+            AnalysisResult.id == analysis_id
+        ).first()
 
         if not analysis:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No analysis found for company"
+                detail=f"Analysis not found: {analysis_id}"
             )
 
-        # Get triggered flags
-        triggered_flags = [f.flag_number for f in analysis.red_flags if f.is_triggered]
+        # Get company info via AnnualReport (AnalysisResult has no direct company_id)
+        from app.models.annual_report import AnnualReport
+        from app.models.red_flag import RedFlag
+        annual_report = db.query(AnnualReport).filter(AnnualReport.id == analysis.report_id).first()
+        company = db.query(Company).filter(Company.id == annual_report.company_id).first() if annual_report else None
+        if not company:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Company not found for analysis: {analysis_id}"
+            )
+
+        # Step 2: Get triggered flags from analysis (red_flags relationship is commented out — query directly)
+        triggered_flags = {
+            flag.flag_number
+            for flag in db.query(RedFlag).filter(
+                RedFlag.analysis_id == analysis.id,
+                RedFlag.is_triggered == True
+            ).all()
+        }
 
         if not triggered_flags:
-            return {
-                'company_id': company_id,
-                'similarity_score': 0,
-                'matched_patterns': [],
-                'risk_assessment': 'LOW',
-                'recommendation': 'No significant red flags detected. Standard due diligence recommended.',
-            }
+            return PatternMatchResponse(
+                analysis_id=analysis.id,
+                company_id=company.id,
+                company_name=company.name,
+                risk_level="LOW",
+                message="No red flags triggered. No fraud pattern similarity detected.",
+                total_matches=0,
+                triggered_flags_count=0,
+                matches=[]
+            )
 
-        # Match against patterns
-        patterns = FRAUD_DATA.get('patterns', [])
+        # Step 3: Load all fraud cases
+        fraud_cases = db.query(FraudCase).all()
+
+        if not fraud_cases:
+            return PatternMatchResponse(
+                analysis_id=analysis.id,
+                company_id=company.id,
+                company_name=company.name,
+                risk_level="LOW",
+                message="No historical fraud cases in database for comparison.",
+                total_matches=0,
+                triggered_flags_count=len(triggered_flags),
+                matches=[]
+            )
+
+        # Step 4: Calculate similarity scores
         matches = []
+        for case in fraud_cases:
+            # Get fraud case flag numbers
+            case_flags = set(case.triggered_flag_numbers)
 
-        for pattern in patterns:
-            common_flags = pattern.get('common_flags', [])
-            if not common_flags:
+            if not case_flags:
                 continue
 
-            matching = set(triggered_flags) & set(common_flags)
-            similarity = (len(matching) / len(common_flags)) * 100 if common_flags else 0
+            # Calculate Jaccard similarity
+            intersection = triggered_flags & case_flags
+            union = triggered_flags | case_flags
 
-            if similarity >= 50:
-                matches.append({
-                    'pattern_name': pattern.get('pattern_name'),
-                    'confidence': round(similarity, 2),
-                    'matching_flags': list(matching),
-                    'total_pattern_flags': len(common_flags),
-                    'description': pattern.get('description'),
-                    'risk_indicators': pattern.get('risk_indicators', []),
-                })
+            if not union:
+                continue
 
-        # Sort by confidence
-        matches.sort(key=lambda x: x['confidence'], reverse=True)
+            similarity = (len(intersection) / len(union)) * 100
 
-        # Determine overall risk
+            # Only include matches above 30% threshold
+            if similarity >= 30:
+                # Get matching flag details
+                matching_flags = []
+                for flag_data in case.red_flags_detected:
+                    if flag_data.get('flag_number') in intersection:
+                        matching_flags.append({
+                            'flag_number': flag_data.get('flag_number'),
+                            'flag_name': flag_data.get('flag_name'),
+                            'category': flag_data.get('category'),
+                            'severity': flag_data.get('severity'),
+                            'when_visible': flag_data.get('when_visible', 'During fraud period')
+                        })
+
+                matches.append(PatternMatchResult(
+                    case_id=case.case_id,
+                    company_name=case.company_name,
+                    year=case.year,
+                    similarity_score=round(similarity, 2),
+                    matching_flags=matching_flags,
+                    stock_decline_percent=float(case.stock_decline_percent) if case.stock_decline_percent else None,
+                    outcome=case.outcome,
+                    lessons=case.lessons_learned
+                ))
+
+        # Step 5: Sort by similarity (highest first)
+        matches.sort(key=lambda x: x.similarity_score, reverse=True)
+
+        # Step 6: Generate risk assessment
         if matches:
-            max_confidence = matches[0]['confidence']
-            if max_confidence >= 80:
+            max_similarity = matches[0].similarity_score
+
+            if max_similarity >= 70:
                 risk_level = "CRITICAL"
-            elif max_confidence >= 60:
+                message = (
+                    f"⚠️ EXTREME CAUTION: Strong similarity ({max_similarity:.1f}%) "
+                    f"with {matches[0].company_name} fraud case. Immediate review recommended."
+                )
+            elif max_similarity >= 50:
                 risk_level = "HIGH"
-            else:
+                message = (
+                    f"⚠️ HIGH RISK: Significant similarity ({max_similarity:.1f}%) "
+                    f"with historical fraud patterns. Detailed investigation recommended."
+                )
+            elif max_similarity >= 30:
                 risk_level = "MEDIUM"
+                message = (
+                    f"⚠️ MODERATE RISK: Some similarities ({max_similarity:.1f}%) "
+                    f"with fraud patterns detected. Enhanced due diligence advised."
+                )
+            else:
+                risk_level = "LOW"
+                message = "Low fraud pattern similarity. Standard due diligence recommended."
         else:
             risk_level = "LOW"
+            message = (
+                f"No significant fraud pattern matches found (threshold: 30%). "
+                f"{len(triggered_flags)} red flags detected but pattern differs from known fraud cases."
+            )
 
-        recommendation = _get_recommendation(risk_level, len(matches))
-
-        return {
-            'company_id': company_id,
-            'similarity_score': round(max([m['confidence'] for m in matches]), 2) if matches else 0,
-            'matched_patterns': matches,
-            'risk_assessment': risk_level,
-            'recommendation': recommendation,
-            'total_triggered_flags': len(triggered_flags),
-        }
+        return PatternMatchResponse(
+            analysis_id=analysis.id,
+            company_id=company.id,
+            company_name=company.name,
+            risk_level=risk_level,
+            message=message,
+            total_matches=len(matches),
+            triggered_flags_count=len(triggered_flags),
+            matches=matches[:5]  # Return top 5 matches
+        )
 
     except HTTPException:
         raise
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid company ID: {str(e)}"
-        )
     except Exception as e:
-        logger.error(f"Error matching fraud patterns: {e}", exc_info=True)
+        logger.error(f"Error in pattern matching: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to match fraud patterns"
-        )
-    finally:
-        db.close()
-
-
-def _get_recommendation(risk_level: str, pattern_count: int) -> str:
-    """Get recommendation based on risk level and pattern count."""
-    recommendations = {
-        'CRITICAL': f'⚠️ EXTREME CAUTION: {pattern_count} fraud pattern(s) strongly match this company. Multiple red flags detected that are commonly seen in major frauds. Consider avoiding this stock or conducting very thorough due diligence with professional advisors.',
-        'HIGH': f'⚠️ HIGH RISK: {pattern_count} fraud pattern(s) detected with significant similarity. Several concerning red flags present. Thorough forensic analysis and expert consultation strongly recommended before investing.',
-        'MEDIUM': f'⚠️ MODERATE RISK: {pattern_count} fraud pattern(s) show some similarities. Some red flags detected that warrant closer examination. Detailed review of financial statements and management practices recommended.',
-        'LOW': 'Low fraud pattern similarity detected. However, standard due diligence is always recommended. Review the company\'s financial statements, management quality, and industry position carefully.',
-    }
-    return recommendations.get(risk_level, 'Unable to assess risk level.')
-
-
-@router.get(
-    "/patterns/",
-    summary="Get fraud patterns",
-    description="Get all known fraud patterns with their characteristics.",
-)
-async def get_fraud_patterns():
-    """Get all fraud patterns."""
-    try:
-        patterns = FRAUD_DATA.get('patterns', [])
-        return {
-            "total": len(patterns),
-            "patterns": patterns,
-        }
-    except Exception as e:
-        logger.error(f"Error fetching fraud patterns: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch fraud patterns"
+            detail=f"Failed to perform pattern matching: {str(e)}"
         )

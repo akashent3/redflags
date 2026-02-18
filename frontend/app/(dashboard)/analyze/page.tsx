@@ -3,25 +3,18 @@
 /**
  * Analysis Page
  *
- * Upload PDF or search for company to analyze
+ * Debounced autocomplete search via FinEdge API → one-click Analyze.
+ * Same search source as Watchlist and Portfolio add-stock.
  */
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Upload,
-  Search,
-  FileText,
-  X,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  Building2,
-} from 'lucide-react';
+import { Search, Loader2, AlertCircle, Building2, X } from 'lucide-react';
 import { api } from '@/lib/api/client';
 
-interface CompanySearchResult {
+// Shape returned by /companies/finedge/search
+interface FinEdgeResult {
   symbol: string;
   name: string;
   nse_code: string;
@@ -32,543 +25,304 @@ interface CompanySearchResult {
 
 export default function AnalyzePage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'upload' | 'search'>('search');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<CompanySearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery]         = useState('');
+  const [suggestions, setSuggestions]         = useState<FinEdgeResult[]>([]);
+  const [searchLoading, setSearchLoading]     = useState(false);
+  const [showDropdown, setShowDropdown]       = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<FinEdgeResult | null>(null);
+
+  // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzingSymbol, setAnalyzingSymbol] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]             = useState<string | null>(null);
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
+  const searchRef   = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      validateAndSetFile(file);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      validateAndSetFile(files[0]);
-    }
-  };
-
-  const validateAndSetFile = (file: File) => {
+  // Debounced autocomplete — calls FinEdge search (same source as Watchlist & Portfolio)
+  const handleSearchInput = useCallback((value: string) => {
+    setSearchQuery(value);
+    setSelectedCompany(null);
     setError(null);
-
-    // Check file type
-    if (file.type !== 'application/pdf') {
-      setError('Please upload a PDF file');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value.trim()) {
+      setSuggestions([]);
+      setShowDropdown(false);
       return;
     }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const res = await api.get(
+          `/companies/finedge/search?q=${encodeURIComponent(value)}&limit=10`
+        );
+        const results: FinEdgeResult[] = res.data.results || [];
+        setSuggestions(results);
+        setShowDropdown(results.length > 0);
+      } catch {
+        setSuggestions([]);
+        setShowDropdown(false);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+  }, []);
 
-    // Check file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    if (file.size > maxSize) {
-      setError('File size must be less than 50MB');
-      return;
-    }
-
-    setSelectedFile(file);
+  const handleSelectCompany = (company: FinEdgeResult) => {
+    setSelectedCompany(company);
+    // Display whichever code is available
+    const code = company.nse_code || company.symbol;
+    setSearchQuery(`${code} — ${company.name}`);
+    setShowDropdown(false);
+    setSuggestions([]);
   };
 
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSelectedCompany(null);
+    setSuggestions([]);
+    setShowDropdown(false);
     setError(null);
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-
-    setIsUploading(true);
-    setError(null);
-    setUploadProgress(0);
-
-    try {
-      // Upload PDF to /reports/upload
-      setUploadProgress(20);
-      const response = await api.upload('/reports/upload', selectedFile);
-      setUploadProgress(100);
-
-      // Redirect to report page
-      setTimeout(() => {
-        const reportId = response.data.report_id;
-        router.push(`/report/${reportId}`);
-      }, 500);
-    } catch (err: any) {
-      console.error('Upload failed:', err);
-      setError(err.response?.data?.detail || 'Upload failed. Please try again.');
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-
-    setIsSearching(true);
-    setError(null);
-
-    try {
-      const response = await api.get<{
-        total: number;
-        returned: number;
-        results: CompanySearchResult[];
-      }>('/companies/finedge/search', {
-        params: {
-          q: searchQuery,
-          limit: 20,
-        },
-      });
-
-      setSearchResults(response.data.results);
-    } catch (err: any) {
-      console.error('Search failed:', err);
-      setError(err.response?.data?.detail || 'Search failed. Please try again.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  // ── Analysis ────────────────────────────────────────────────────────────────
 
   const pollTaskStatus = async (taskId: string): Promise<any> => {
-    const maxAttempts = 120; // 10 minutes max
+    const maxAttempts = 120; // 10 minutes
     let attempts = 0;
-
     while (attempts < maxAttempts) {
-      try {
-        const response = await api.get(`/analysis/task/${taskId}`);
-        const status = response.data.status;
-
-        if (status === 'SUCCESS') {
-          return response.data;
-        } else if (status === 'FAILURE') {
-          throw new Error(response.data.error || 'Analysis failed');
-        }
-
-        // Still pending/progress - wait and retry
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-        attempts++;
-      } catch (err) {
-        throw err;
-      }
+      const response = await api.get(`/analysis/task/${taskId}`);
+      const status = response.data.status;
+      if (status === 'SUCCESS') return response.data;
+      if (status === 'FAILURE') throw new Error(response.data.error || 'Analysis failed');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      attempts++;
     }
-
     throw new Error('Analysis timed out');
   };
 
-  const handleAnalyzeCompany = async (company: CompanySearchResult) => {
+  const handleAnalyze = async () => {
+    if (!selectedCompany) return;
     setIsAnalyzing(true);
-    setAnalyzingSymbol(company.symbol);
     setError(null);
 
     try {
-      // Trigger analysis via /analysis/analyze-symbol/{symbol}
-      const response = await api.post(`/analysis/analyze-symbol/${company.symbol}`);
-      
-      // ✅ Check if analysis already exists (instant completion)
+      // Use nse_code if available, fall back to symbol
+      const symbol = selectedCompany.nse_code || selectedCompany.symbol;
+      const response = await api.post(`/analysis/analyze-symbol/${symbol}`);
+
+      // Already completed — redirect immediately
       if (response.data.status === 'COMPLETED') {
-        console.log('✓ Analysis already exists! Redirecting immediately...');
-        
-        // Get analysis_id from response
         const analysisId = response.data.analysis_id;
-        
-        if (!analysisId) {
-          throw new Error('No analysis ID returned from completed analysis');
-        }
-        
-        // Redirect immediately to report page (< 1 second)
+        if (!analysisId) throw new Error('No analysis ID returned');
         router.push(`/report/${analysisId}`);
         return;
       }
 
-      // ✅ Validate task_id exists for new analysis
+      // New analysis — poll for completion
       const taskId = response.data.task_id;
-      
-      if (!taskId) {
-        throw new Error('No task ID returned from server');
-      }
+      if (!taskId) throw new Error('No task ID returned from server');
 
-      console.log('⏳ New analysis started. Polling for completion...');
-
-      // Poll for status (new analysis)
       const result = await pollTaskStatus(taskId);
+      const analysisId =
+        result.analysis_id ||
+        result.result?.analysis_id ||
+        result.data?.analysis_id;
 
-      // ✅ FIX: Get analysis_id from the TOP LEVEL of result (not nested)
-      console.log('Task result:', result);  // Debug log
-      
-      let analysisId;
-      
-      // Try different possible locations
-      if (result.analysis_id) {
-        // Case 1: analysis_id at top level
-        analysisId = result.analysis_id;
-      } else if (result.result && result.result.analysis_id) {
-        // Case 2: nested in result.result
-        analysisId = result.result.analysis_id;
-      } else if (result.data && result.data.analysis_id) {
-        // Case 3: nested in result.data
-        analysisId = result.data.analysis_id;
-      }
-      
-      if (!analysisId) {
-        console.error('Full result object:', JSON.stringify(result, null, 2));
-        throw new Error('No analysis ID returned from analysis result');
-      }
-
-      console.log('✓ Analysis complete! Redirecting to report...');
-
-      // Redirect to report page with analysis_id
+      if (!analysisId) throw new Error('No analysis ID in result');
       router.push(`/report/${analysisId}`);
-      
+
     } catch (err: any) {
-      console.error('Analysis failed:', err);
       setError(
-        err.response?.data?.detail ||
-          err.message ||
-          'Analysis failed. Please try again.'
+        err.response?.data?.detail || err.message || 'Analysis failed. Please try again.'
       );
       setIsAnalyzing(false);
-      setAnalyzingSymbol(null);
     }
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Page header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Analyze Report</h1>
         <p className="mt-2 text-gray-600">
-          Search for any NSE/BSE company or upload an annual report PDF
+          Search any NSE / BSE listed company and run a red-flag analysis
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <div className="flex gap-8">
-          <button
-            onClick={() => setActiveTab('search')}
-            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'search'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-            }`}
-          >
-            <Search className="h-4 w-4 inline mr-2" />
-            Search Company
-          </button>
-          <button
-            onClick={() => setActiveTab('upload')}
-            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'upload'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-            }`}
-          >
-            <Upload className="h-4 w-4 inline mr-2" />
-            Upload PDF
-          </button>
-        </div>
-      </div>
+      <div className="max-w-4xl">
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-8">
 
-      {/* Upload Tab */}
-      {activeTab === 'upload' && (
-        <div className="max-w-2xl">
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-8">
-            {/* Error Alert */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md flex items-start gap-3 mb-6">
-                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Error</p>
-                  <p className="text-sm mt-1">{error}</p>
-                </div>
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md flex items-start gap-3 mb-6">
+              <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Error</p>
+                <p className="text-sm mt-1">{error}</p>
               </div>
-            )}
+              <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">×</button>
+            </div>
+          )}
 
-            {!selectedFile ? (
-              <>
-                {/* Dropzone */}
-                <div
-                  onDragEnter={handleDragEnter}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-                    isDragging
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-900 mb-2">
-                    Drop your PDF here, or click to browse
-                  </p>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Maximum file size: 50MB
-                  </p>
+          {/* Analyzing status */}
+          {isAnalyzing && selectedCompany && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md flex items-start gap-3 mb-6">
+              <Loader2 className="h-5 w-5 mt-0.5 flex-shrink-0 animate-spin" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  Analyzing {selectedCompany.nse_code || selectedCompany.symbol}
+                </p>
+                <p className="text-sm mt-1">
+                  Checking for existing analysis or fetching the latest annual report from NSE India…
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Autocomplete search + Analyze button */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Company
+            </label>
+            <div className="flex gap-3 items-start">
+
+              {/* Input + dropdown */}
+              <div className="flex-1 relative" ref={searchRef}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                   <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="file-upload"
+                    type="text"
+                    placeholder="Type company name or NSE symbol (e.g. Reliance, TCS, INFY)…"
+                    value={searchQuery}
+                    onChange={e => handleSearchInput(e.target.value)}
+                    onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+                    disabled={isAnalyzing}
+                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
-                  <label htmlFor="file-upload">
-                    <Button asChild>
-                      <span>Choose File</span>
-                    </Button>
-                  </label>
-                </div>
-
-                {/* Supported formats */}
-                <div className="mt-6 text-sm text-gray-600">
-                  <p className="font-medium mb-2">Supported formats:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>PDF files up to 50MB</li>
-                    <li>Annual reports with financial statements</li>
-                    <li>Both text-based and scanned PDFs</li>
-                  </ul>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Selected File */}
-                <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="bg-blue-100 p-3 rounded-lg">
-                      <FileText className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 mb-1">
-                        {selectedFile.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </div>
-                    {!isUploading && (
-                      <button
-                        onClick={handleRemoveFile}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Upload Progress */}
-                  {isUploading && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                        <span>Uploading...</span>
-                        <span>{uploadProgress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                    </div>
+                  {searchQuery && !isAnalyzing && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                  {searchLoading && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-blue-500" />
                   )}
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-4">
-                  <Button
-                    onClick={handleUpload}
-                    disabled={isUploading}
-                    className="flex-1"
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Analyze Report
-                      </>
-                    )}
-                  </Button>
-                  {!isUploading && (
-                    <Button onClick={handleRemoveFile} variant="outline">
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-
-                {/* Info */}
-                {!isUploading && (
-                  <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>What happens next?</strong> We'll analyze the PDF using
-                      Gemini AI and check 44+ red flags. This usually takes 1-2 minutes.
-                    </p>
+                {/* Dropdown results */}
+                {showDropdown && suggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                    {suggestions.map((company, idx) => {
+                      const code = company.nse_code || company.symbol;
+                      return (
+                        <button
+                          key={`${company.symbol}-${idx}`}
+                          onClick={() => handleSelectCompany(company)}
+                          className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <span className="font-semibold text-blue-700 text-sm flex-shrink-0">{code}</span>
+                              <span className="text-gray-700 text-sm truncate">{company.name}</span>
+                            </div>
+                            {company.exchange && (
+                              <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{company.exchange}</span>
+                            )}
+                          </div>
+                          {company.bse_code && company.nse_code && (
+                            <p className="text-xs text-gray-400 mt-0.5 ml-6">
+                              BSE: {company.bse_code}
+                            </p>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* Search Tab */}
-      {activeTab === 'search' && (
-        <div className="max-w-4xl">
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-8">
-            {/* Error Alert */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md flex items-start gap-3 mb-6">
-                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Error</p>
-                  <p className="text-sm mt-1">{error}</p>
-                </div>
+                {/* No results */}
+                {showDropdown && suggestions.length === 0 && !searchLoading && searchQuery.length >= 2 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                    <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                      No companies found for &quot;{searchQuery}&quot;
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Analyzing Alert */}
-            {isAnalyzing && analyzingSymbol && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md flex items-start gap-3 mb-6">
-                <Loader2 className="h-5 w-5 mt-0.5 flex-shrink-0 animate-spin" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Analyzing {analyzingSymbol}</p>
-                  <p className="text-sm mt-1">
-                    Checking for existing analysis or fetching latest annual report from NSE India...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Search Bar */}
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by company name or stock code (e.g., Reliance, TCS, INFY)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  disabled={isAnalyzing}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                />
-              </div>
-              <Button onClick={handleSearch} disabled={isSearching || !searchQuery.trim() || isAnalyzing}>
-                {isSearching ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+              {/* Analyze button — enabled only after selection */}
+              <Button
+                onClick={handleAnalyze}
+                disabled={!selectedCompany || isAnalyzing}
+                className="py-3 px-6 flex-shrink-0"
+              >
+                {isAnalyzing ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing…</>
                 ) : (
-                  'Search'
+                  'Analyze'
                 )}
               </Button>
             </div>
 
-            {/* Search Results */}
-            {searchResults.length > 0 ? (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">
-                  Search Results ({searchResults.length})
-                </h3>
-                {searchResults.map((company) => (
-                  <div
-                    key={company.symbol}
-                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
-                  >
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-gray-400" />
-                        {company.name}
-                      </h4>
-                      <div className="flex items-center gap-4 mt-1">
-                        <span className="text-sm text-gray-600">
-                          NSE: <span className="font-medium">{company.nse_code || company.symbol}</span>
-                        </span>
-                        {company.bse_code && (
-                          <span className="text-sm text-gray-600">
-                            BSE: <span className="font-medium">{company.bse_code}</span>
-                          </span>
-                        )}
-                        <span className="text-sm text-gray-600">
-                          {company.exchange}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleAnalyzeCompany(company)}
-                      disabled={isAnalyzing}
-                      variant="outline"
-                    >
-                      {isAnalyzing && analyzingSymbol === company.symbol ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        'Analyze'
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : searchQuery && !isSearching ? (
-              <div className="text-center py-12">
-                <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No companies found</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Try searching with a different name or stock code
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600 mb-2">Search NSE/BSE Listed Companies</p>
-                <p className="text-sm text-gray-500">
-                  Enter a company name or stock code to get started
-                </p>
+            {/* Selected company chip */}
+            {selectedCompany && !isAnalyzing && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
+                <Building2 className="h-4 w-4 flex-shrink-0" />
+                <span className="font-semibold">{selectedCompany.nse_code || selectedCompany.symbol}</span>
+                <span>—</span>
+                <span>{selectedCompany.name}</span>
+                {selectedCompany.exchange && (
+                  <span className="text-gray-500 text-xs ml-auto">{selectedCompany.exchange}</span>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Info */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>How it works:</strong> Search for any NSE/BSE company. If analysis already exists, 
-              you'll be redirected instantly (&lt; 1 second)! Otherwise, we'll automatically fetch the latest 
-              annual report from NSE India, extract financial data from FinEdge API, and analyze 44+ red flags 
-              using AI. New analysis typically takes 1-2 minutes.
+            <p className="text-sm text-gray-500 mt-3">
+              💡 Start typing to search, select a company from the dropdown, then click <strong>Analyze</strong>
             </p>
           </div>
+
+          {/* Empty state */}
+          {!selectedCompany && !searchQuery && (
+            <div className="text-center py-10 border-t border-gray-100">
+              <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">Search NSE / BSE Listed Companies</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Enter a company name or stock symbol above to get started
+              </p>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* How it works */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            <strong>How it works:</strong> Search any NSE / BSE listed company. If an analysis already
+            exists you&apos;ll be redirected instantly (&lt; 1 second). Otherwise we fetch the latest
+            annual report from NSE India, extract financials via FinEdge API, and analyse red flags
+            using AI. New analyses typically take 1–2 minutes.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

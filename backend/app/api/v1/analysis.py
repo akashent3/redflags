@@ -173,6 +173,69 @@ async def get_task_status(
 
 
 @router.get(
+    "/my-companies",
+    summary="Get companies the current user has interacted with",
+    description="Returns distinct companies from user's analyses, watchlist, and portfolio for autocomplete.",
+)
+async def get_my_companies(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Returns all companies associated with the current user. Deduplicated and sorted alphabetically."""
+    try:
+        from app.models.user_analysis import UserAnalysis
+        from app.models.company import Company
+        from app.models.watchlist import WatchlistItem
+        from app.models.portfolio import Holding, Portfolio
+
+        company_map = {}
+
+        # 1. Companies from user's analyses (via UserAnalysis tracking)
+        analyzed = (
+            db.query(Company.id, Company.name, Company.nse_symbol)
+            .join(AnnualReport, AnnualReport.company_id == Company.id)
+            .join(AnalysisResult, AnalysisResult.report_id == AnnualReport.id)
+            .join(UserAnalysis, UserAnalysis.analysis_id == AnalysisResult.id)
+            .filter(UserAnalysis.user_id == current_user.id)
+            .all()
+        )
+        for row in analyzed:
+            company_map[str(row.id)] = {"id": str(row.id), "name": row.name, "nse_symbol": row.nse_symbol}
+
+        # 2. Companies from user's watchlist
+        watchlisted = (
+            db.query(Company.id, Company.name, Company.nse_symbol)
+            .join(WatchlistItem, WatchlistItem.company_id == Company.id)
+            .filter(WatchlistItem.user_id == current_user.id)
+            .all()
+        )
+        for row in watchlisted:
+            company_map[str(row.id)] = {"id": str(row.id), "name": row.name, "nse_symbol": row.nse_symbol}
+
+        # 3. Companies from user's portfolio holdings
+        portfolio_companies = (
+            db.query(Company.id, Company.name, Company.nse_symbol)
+            .join(Holding, Holding.company_id == Company.id)
+            .join(Portfolio, Portfolio.id == Holding.portfolio_id)
+            .filter(Portfolio.user_id == current_user.id)
+            .filter(Holding.company_id.isnot(None))
+            .all()
+        )
+        for row in portfolio_companies:
+            company_map[str(row.id)] = {"id": str(row.id), "name": row.name, "nse_symbol": row.nse_symbol}
+
+        companies = sorted(company_map.values(), key=lambda c: c["name"])
+        return {"companies": companies, "total": len(companies)}
+
+    except Exception as e:
+        logger.error(f"Failed to get user companies: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get companies: {str(e)}",
+        )
+
+
+@router.get(
     "/{analysis_id}",
     response_model=AnalysisResponse,
     summary="Get analysis result",
@@ -507,3 +570,5 @@ async def analyze_company_by_symbol(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit analysis task: {str(e)}",
         )
+
+

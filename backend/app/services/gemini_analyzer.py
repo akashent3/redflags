@@ -425,7 +425,10 @@ Return your response as a valid JSON object with the exact structure shown below
 Remember: Return ONLY the JSON object, no other text. Be precise and cite specific page numbers, amounts, or quotes from the report where possible.
 """
 
-# Bank/NBFC/Financial Services prompt - replaces #50 (bad_debt) with 3 bank-specific flags (#57 CASA, #58 PCR, #59 Restructured Book)
+# Bank/NBFC/Financial Services prompt — COMPLETE REVAMP.
+# 17 Gemini-analyzed flags for banks (B16-B32), flag_numbers 116-132.
+# ONLY these 17 flags are shown for banks from Gemini analysis.
+# No non-bank flags (#2-#51) are included here — banks get their own complete set.
 ANALYSIS_PROMPT_BANK = """You are an expert Indian financial analyst specializing in forensic accounting and red flag detection for **banks, NBFCs, and financial services companies**. You are analyzing an annual report PDF.
 
 **CRITICAL INSTRUCTION - CONSOLIDATED vs STANDALONE:**
@@ -434,7 +437,7 @@ ANALYSIS_PROMPT_BANK = """You are an expert Indian financial analyst specializin
 - If both consolidated and standalone are present, STRICTLY use ONLY consolidated figures.
 - State clearly at the top which type you used: "consolidated" or "standalone".
 
-Analyze this annual report and check for ALL 24 red flags listed below. For each flag, provide:
+Analyze this annual report and check for ALL 17 red flags listed below. These are BANK/NBFC-specific flags only. For each flag, provide:
 1. "triggered": true/false
 2. "confidence": 0-100 (how confident you are)
 3. "evidence": specific text/numbers from the report supporting your finding
@@ -444,7 +447,7 @@ Analyze this annual report and check for ALL 24 red flags listed below. For each
 - Return ONLY a valid JSON object. No markdown, no ```json blocks, no text before or after.
 - In ALL string values, NEVER use double quotes. Use single quotes (') instead when quoting text from the report.
 - Example: "evidence": "The auditor states 'there has been no resignation' on page 344"
-- Keep evidence VERY short (under 100 characters). Just state the finding. Example: 'No auditor resignation found (page 344)' or 'Qualified opinion issued on inventory valuation (page 89)'.
+- Keep evidence VERY short (under 100 characters). Just state the finding.
 - Keep details field VERY short (under 80 characters) or empty string.
 - This is essential to avoid JSON parsing errors.
 
@@ -454,265 +457,188 @@ Return your response as a valid JSON object with the exact structure shown below
   "statement_type_used": "consolidated" or "standalone",
   "analysis_year": "FY ending year e.g. 2024",
   "flags": {
-    "qualified_opinion": {
-      "flag_number": 2,
-      "flag_name": "Qualified/Adverse/Disclaimer Opinion",
-      "category": "Auditor",
-      "severity": "CRITICAL",
-      "rule": "Auditor issued a qualified, adverse, or disclaimer opinion instead of unmodified/clean opinion",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "emphasis_of_matter": {
-      "flag_number": 3,
-      "flag_name": "Emphasis of Matter",
-      "category": "Auditor",
-      "severity": "MEDIUM",
-      "rule": "Auditor included Emphasis of Matter paragraph highlighting concerns",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "going_concern": {
-      "flag_number": 4,
-      "flag_name": "Going Concern Doubt",
-      "category": "Auditor",
-      "severity": "CRITICAL",
-      "rule": "Auditor or notes mention material uncertainty about ability to continue as going concern",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "audit_fees": {
-      "flag_number": 6,
-      "flag_name": "Audit Fees Unusual",
-      "category": "Auditor",
-      "severity": "MEDIUM",
-      "rule": "Audit fees unusually HIGH (>0.5% of revenue) or non-audit fees exceed audit fees",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "rpt_high": {
-      "flag_number": 15,
-      "flag_name": "RPT > 10% Revenue",
-      "category": "Related Party",
-      "severity": "HIGH",
-      "rule": "Total related party transactions exceed 10% of revenue from operations",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "loans_to_rp": {
-      "flag_number": 16,
-      "flag_name": "Loans to Related Parties",
-      "category": "Related Party",
-      "severity": "HIGH",
-      "rule": "Loans/advances to related parties exceed 5% of revenue OR 5% of net profit (PAT)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "rp_premium": {
-      "flag_number": 17,
-      "flag_name": "RP Premium/Non-Arms Length Transactions",
-      "category": "Related Party",
-      "severity": "HIGH",
-      "rule": "Transactions with related parties at prices different from market/arms length",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "rpt_revenue_increasing": {
-      "flag_number": 18,
-      "flag_name": "RPT Revenue Increasing",
-      "category": "Related Party",
-      "severity": "MEDIUM",
-      "rule": "Revenue from related parties increasing as proportion of total revenue YoY",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "loans_to_directors": {
-      "flag_number": 20,
-      "flag_name": "Loans to Directors",
-      "category": "Related Party",
-      "severity": "CRITICAL",
-      "rule": "Any loans or advances given to directors, KMP, or their relatives (Sec 185/186)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "disproportionate_salary": {
-      "flag_number": 25,
-      "flag_name": "Disproportionate Director Salary",
-      "category": "Promoter",
-      "severity": "MEDIUM",
-      "rule": "Director remuneration >10% of net profit or increased despite declining profits",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "icds": {
-      "flag_number": 27,
-      "flag_name": "Inter-Corporate Deposits",
-      "category": "Promoter",
-      "severity": "HIGH",
-      "rule": "Material inter-corporate deposits or loans given to group/associate companies",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "audit_committee": {
-      "flag_number": 29,
-      "flag_name": "Audit Committee Issues",
-      "category": "Governance",
-      "severity": "MEDIUM",
-      "rule": "Audit committee has <3 members, <2/3 independent, no financial expert, or <4 meetings/year",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "regulatory_penalties": {
-      "flag_number": 30,
-      "flag_name": "SEBI/RBI Penalties",
-      "category": "Governance",
-      "severity": "HIGH",
-      "rule": "SEBI/RBI orders, penalties, NPA divergence flags, or regulatory non-compliance reported",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "whistleblower": {
-      "flag_number": 31,
-      "flag_name": "Whistleblower Complaints",
-      "category": "Governance",
-      "severity": "CRITICAL",
-      "rule": "Whistleblower/vigil mechanism complaints received, or fraud reported under Sec 143(12)",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "contingent_liabilities": {
-      "flag_number": 35,
-      "flag_name": "Contingent Liabilities High",
-      "category": "Balance Sheet",
-      "severity": "HIGH",
-      "rule": "Contingent liabilities (tax demands, legal cases, guarantees) exceed 20% of net worth",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "debt_restructuring": {
-      "flag_number": 36,
-      "flag_name": "Debt Restructuring",
+    "npa_divergence": {
+      "flag_number": 116,
+      "flag_name": "NPA Divergence",
       "category": "Balance Sheet",
       "severity": "CRITICAL",
-      "rule": "Any sign of debt restructuring, OTS, CDR, moratorium, or change in repayment terms",
+      "rule": "Any non-zero divergence between bank-declared NPAs and RBI-assessed NPAs reported in annual report",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
     },
-    "asset_pledging": {
-      "flag_number": 37,
-      "flag_name": "Asset Pledging",
-      "category": "Balance Sheet",
-      "severity": "MEDIUM",
-      "rule": "Significant assets (>30% of total) pledged as collateral for borrowings",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "casa_declining": {
-      "flag_number": 57,
-      "flag_name": "CASA Ratio Declining",
-      "category": "Cash Flow",
-      "severity": "MEDIUM",
-      "rule": "CASA ratio declined >300bps YoY or below 30%, indicating costlier funding mix",
-      "triggered": false,
-      "confidence": 0,
-      "evidence": "explanation",
-      "details": ""
-    },
-    "pcr_declining": {
-      "flag_number": 58,
-      "flag_name": "Provision Coverage Ratio Declining",
+    "slippage_ratio": {
+      "flag_number": 117,
+      "flag_name": "Slippage Ratio",
       "category": "Balance Sheet",
       "severity": "HIGH",
-      "rule": "Provision coverage ratio declined >5 percentage points YoY or below 60%",
+      "rule": "Year-over-year rising trend in slippage ratio (fresh NPA additions / opening gross advances). Rising trend e.g. 1.5% to 3% indicates failing underwriting.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "writeoff_dependency": {
+      "flag_number": 118,
+      "flag_name": "Write-off Dependency",
+      "category": "Balance Sheet",
+      "severity": "HIGH",
+      "rule": "Write-offs exceed 25% of opening Gross NPA. Formula: (Amounts Written Off / Opening Gross NPA) * 100 > 25%. Indicates hiding bad loans by destroying value.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "sma2_book": {
+      "flag_number": 119,
+      "flag_name": "Watchlist / SMA-2 Book",
+      "category": "Balance Sheet",
+      "severity": "HIGH",
+      "rule": "SMA-2 accounts (overdue 61-90 days) represent more than 2% of Total Advances. This is the imminent NPA pipeline.",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
     },
     "restructured_book": {
-      "flag_number": 59,
-      "flag_name": "Restructured Book Increasing",
+      "flag_number": 120,
+      "flag_name": "Restructured Book Size",
       "category": "Balance Sheet",
       "severity": "HIGH",
-      "rule": "Restructured advances increased >20% YoY or exceed 2% of gross advances",
+      "rule": "Restructured advances exceed 2% of Total Advances. These are often non-viable businesses kept on life support.",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
     },
-    "revenue_policy_change": {
-      "flag_number": 40,
-      "flag_name": "Revenue Recognition Policy Change",
-      "category": "Revenue",
+    "security_receipts": {
+      "flag_number": 121,
+      "flag_name": "Security Receipts (SR) Buildup",
+      "category": "Balance Sheet",
       "severity": "HIGH",
-      "rule": "Change in revenue/interest income recognition accounting policy during the year",
+      "rule": "High or growing Security Receipts (SRs) balance from ARC sales — bad loans sold on paper but no actual cash recovery.",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
     },
-    "unbilled_revenue": {
-      "flag_number": 41,
-      "flag_name": "Unbilled Revenue High",
-      "category": "Revenue",
+    "evergreening_proxy": {
+      "flag_number": 122,
+      "flag_name": "Evergreening Proxy",
+      "category": "Balance Sheet",
+      "severity": "CRITICAL",
+      "rule": "Sudden conversion of Term Loans into Cash Credit/Overdraft accounts to prevent NPA classification (evergreening signal).",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "alm_mismatch": {
+      "flag_number": 123,
+      "flag_name": "ALM Mismatch",
+      "category": "Cash Flow",
+      "severity": "HIGH",
+      "rule": "Liabilities exceed assets in the 1-14 day and 15-28 day maturity buckets (negative mismatch) — indicates imminent liquidity stress.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "bulk_deposit_dependence": {
+      "flag_number": 124,
+      "flag_name": "Bulk Deposit Dependence",
+      "category": "Cash Flow",
       "severity": "MEDIUM",
-      "rule": "Unbilled revenue, accrued interest, or contract assets exceed 10% of total revenue and growing",
+      "rule": "(Inter-bank + Corporate/Bulk Deposits) / Total Deposits > 30-40%. High reliance on hot money that will vanish during a crisis.",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
     },
-    "mda_tone": {
-      "flag_number": 42,
-      "flag_name": "MD&A Tone Defensive",
-      "category": "Textual",
+    "casa_erosion": {
+      "flag_number": 125,
+      "flag_name": "CASA Ratio Erosion",
+      "category": "Cash Flow",
       "severity": "MEDIUM",
-      "rule": "MD&A uses excessive blame on external factors, avoids specifics, or is evasive about problems",
+      "rule": "CASA ratio declining YoY by >300bps OR below 30%. Losing cheap funds and paying expensive debt.",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
       "details": ""
     },
-    "jv_associate_losses": {
-      "flag_number": 51,
-      "flag_name": "JV/Associate Loss Hiding",
+    "contingent_liability_overload": {
+      "flag_number": 126,
+      "flag_name": "Contingent Liability Overload",
+      "category": "Balance Sheet",
+      "severity": "HIGH",
+      "rule": "Guarantees given and Letters of Credit exceed 5x Net Worth (capital + reserves). Off-balance-sheet guarantees that if invoked can wipe out the bank.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "dta_bloat": {
+      "flag_number": 127,
+      "flag_name": "Deferred Tax Asset (DTA) Bloat",
+      "category": "Balance Sheet",
+      "severity": "MEDIUM",
+      "rule": "Rapid creation of Deferred Tax Assets (DTA) — artificially boosts Book Value based only on hope of future profits.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "related_party_transactions": {
+      "flag_number": 128,
+      "flag_name": "Related Party Transactions",
       "category": "Related Party",
+      "severity": "HIGH",
+      "rule": "High volume or value of loans, investments, or service fees to director-owned or non-subsidiary related party entities (siphoning risk).",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "auditor_remuneration_skew": {
+      "flag_number": 129,
+      "flag_name": "Auditor Remuneration Skew",
+      "category": "Auditor",
       "severity": "MEDIUM",
-      "rule": "Persistent losses in JVs/associates for 2+ years or significant investment write-downs",
+      "rule": "Non-audit service fees exceed statutory audit fees. High ratio means auditors earn more from consulting than auditing — independence compromised.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "top20_borrower_exposure": {
+      "flag_number": 130,
+      "flag_name": "Top 20 Borrowers Exposure",
+      "category": "Balance Sheet",
+      "severity": "HIGH",
+      "rule": "Top 20 borrowers represent more than 15-20% of Total Advances. High concentration risk — default of a few can destabilize the bank.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "sectoral_concentration": {
+      "flag_number": 131,
+      "flag_name": "Sectoral Concentration",
+      "category": "Balance Sheet",
+      "severity": "MEDIUM",
+      "rule": "Exposure to a single high-risk sector (Real Estate, Aviation, Infra) exceeds 20% of total advances.",
+      "triggered": false,
+      "confidence": 0,
+      "evidence": "explanation",
+      "details": ""
+    },
+    "auditor_qualifications": {
+      "flag_number": 132,
+      "flag_name": "Auditor Qualifications",
+      "category": "Auditor",
+      "severity": "CRITICAL",
+      "rule": "Any Qualified Opinion, Adverse Opinion, Emphasis of Matter, or Material Uncertainty regarding going concern in the Independent Auditor's Report.",
       "triggered": false,
       "confidence": 0,
       "evidence": "explanation",
@@ -723,147 +649,118 @@ Return your response as a valid JSON object with the exact structure shown below
 
 **DETAILED CHECKING INSTRUCTIONS FOR EACH FLAG:**
 
-**FLAG 2 - Qualified/Adverse/Disclaimer Opinion:**
-- Read the Independent Auditor's Report carefully
-- Look for the exact words: "Qualified Opinion", "Adverse Opinion", "Disclaimer of Opinion"
-- An "Unmodified Opinion" or "Clean Opinion" means this flag is NOT triggered
-- "Except for" language in the opinion paragraph indicates qualification
+**FLAG B16 (116) - NPA Divergence:**
+- Search specifically for the section titled "Divergence in Asset Classification and Provisioning" or similar
+- Look for notes disclosing the RBI's risk-based supervision (RBS) assessment vs bank's own classification
+- Any non-zero divergence figure means the regulator caught the bank hiding bad loans
+- Also check for any RBI communication or annual inspection findings referenced in the report
+- A divergence of even ₹1 in NPA recognition is a red flag
 
-**FLAG 3 - Emphasis of Matter (EOM):**
-- Check ONLY for "Emphasis of Matter" paragraphs in the auditor's report
-- DO NOT consider "Other Matter" paragraphs - ONLY "Emphasis of Matter"
-- These highlight important issues without qualifying the opinion
-- Look for references to contingencies, going concern, litigation, regulatory issues
-- Multiple EOM paragraphs increase severity
-- Note: "Other Matter" sections should be IGNORED for this flag
+**FLAG B17 (117) - Slippage Ratio:**
+- Find the "Movement of NPAs" note or asset quality section
+- Look for "Fresh additions to NPAs" or "Slippages" during the year
+- Calculate: Fresh NPA additions / Opening Gross Advances
+- A year-over-year rising trend (e.g., 1.5% → 2% → 3%) indicates failing underwriting standards
+- Flag if slippage ratio is rising for 2+ consecutive years
 
-**FLAG 4 - Going Concern Doubt:**
-- Search for "going concern", "material uncertainty", "ability to continue as a going concern"
-- Check both auditor's report and notes to financial statements
-- Also check for "accumulated losses exceed net worth" or similar language
+**FLAG B18 (118) - Write-off Dependency:**
+- Find the NPA movement schedule or "Movement of NPAs" note
+- Look for "Amounts Written Off" or "Technical Write-offs" during the year
+- Calculate: (Amounts Written Off / Opening Gross NPA) * 100
+- Flag if this ratio exceeds 25%
+- High write-offs vs NPAs means the bank is destroying value rather than recovering cash
 
-**FLAG 6 - Audit Fees Unusual:**
-- Find statutory audit fees in the notes (usually under "Payments to Auditors")
-- Calculate: (Audit Fees / Revenue) * 100 to get percentage
-- Compare audit fees to company revenue - unusually HIGH fees (>0.5% of revenue) may indicate complex audit or concerns
-- Flag if audit fees exceed 0.5% of total revenue from operations
-- Also check for high non-audit fees relative to audit fees (independence concern - flag if non-audit fees > audit fees)
-- Example: If revenue is ₹1,000 crore and audit fees are ₹6 crore, that's 0.6% → FLAG IT
-- Example: If revenue is ₹1,000 crore and audit fees are ₹4 crore, that's 0.4% → DO NOT FLAG
+**FLAG B19 (119) - Watchlist / SMA-2 Book:**
+- Search for "SMA" (Special Mention Account) disclosures in Asset Quality section
+- SMA-2 = accounts overdue 61-90 days (just before NPA classification)
+- Flag if SMA-2 accounts > 2% of Total Advances
+- This represents the imminent NPA pipeline and a leading indicator of future stress
 
-**FLAG 15 - RPT > 10% Revenue:**
-- Find the Related Party Transactions disclosure (Note/Schedule)
-- Sum all transaction values with related parties
-- Compare total RPT to total revenue/interest income
-- Flag if RPT exceeds 10% of revenue
+**FLAG B20 (120) - Restructured Book Size:**
+- Find "Restructured Assets" note or Schedule
+- Look for total value of loans under any restructuring scheme
+- Flag if restructured advances > 2% of Total Gross Advances
+- Look for mentions of: MSME restructuring, COVID restructuring, Resolution Framework 1.0/2.0 carryovers
 
-**FLAG 16 - Loans to Related Parties:**
-- In the RPT note, look for: loans given, advances, deposits with related parties
-- Check for outstanding balances at year end
-- Calculate if loans/advances to related parties exceed 5% of revenue OR 5% of PAT
-- Flag if either threshold is breached
+**FLAG B21 (121) - Security Receipts (SR) Buildup:**
+- Check Schedule 8 (Investments) or equivalent for "Security Receipts" (SRs)
+- SRs are issued by ARCs (Asset Reconstruction Companies) when banks sell NPAs
+- A high or growing SR balance means bad loans were sold on paper but the bank retains the risk
+- Flag if SR balance is significant (>1% of advances) or growing YoY
 
-**FLAG 17 - RP Premium/Non-Arms Length Transactions:**
-- Look for language about "arm's length" pricing in RPT disclosures
-- Check if any transactions are noted as being at rates different from market
-- Board/audit committee observations on RPT pricing
+**FLAG B22 (122) - Evergreening Proxy:**
+- Compare the composition of the advances book: Term Loans vs Cash Credit / Overdraft / Working Capital
+- Look for sudden large increases in Cash Credit / Overdraft limits
+- A sudden conversion of Term Loans into Cash Credit prevents NPA classification (evergreening)
+- Also look for "fresh disbursements to stressed accounts" or RBI comments on evergreening
+- This is a direct fraud indicator — flag with high confidence if found
 
-**FLAG 18 - RPT Revenue Increasing:**
-- Compare current year RPT revenue with previous year (if disclosed)
-- Check if the proportion of revenue from related parties is increasing
+**FLAG B23 (123) - ALM Mismatch:**
+- Find the "Maturity Pattern of Assets and Liabilities" table (required under RBI guidelines)
+- Check the 1-14 days and 15-28 days maturity buckets specifically
+- Flag if Liabilities exceed Assets in these short-term buckets (Negative Mismatch)
+- A negative mismatch in short buckets implies imminent liquidity stress
 
-**FLAG 20 - Loans to Directors:**
-- Specifically search for loans/advances to directors, KMP, or their relatives
-- Check Section 185/186 of Companies Act compliance disclosures
-- Any loan to a director is a serious red flag under Indian law
+**FLAG B24 (124) - Bulk Deposit Dependence:**
+- Find the "Concentration of Deposits" or deposit composition disclosure
+- Look for: Inter-bank deposits, Corporate deposits, Bulk deposits (typically >₹2 crore)
+- Calculate: (Inter-bank deposits + Corporate/Bulk deposits) / Total Deposits
+- Flag if this ratio exceeds 30-40%
+- High reliance on hot money that will disappear during a crisis
 
-**FLAG 25 - Disproportionate Director Salary:**
-- Find director/KMP remuneration details (in Corporate Governance Report or Notes)
-- Compare total director remuneration to company's net profit
-- If director pay > 10% of net profit or increased despite declining profits, flag it
-
-**FLAG 27 - Inter-Corporate Deposits (ICDs):**
-- Search for "inter-corporate deposits", "ICDs", "inter corporate loans"
-- Check loans and advances given to group/associate companies
-- Material ICDs to related or group companies are a significant red flag
-
-**FLAG 29 - Audit Committee Issues:**
-- Check audit committee composition - needs minimum 3 members, 2/3 independent
-- Look for frequent changes in audit committee membership
-- Review number of audit committee meetings held (minimum 4 per year)
-
-**FLAG 30 - SEBI/RBI Penalties:**
-- Search for SEBI/RBI orders, show cause notices, penalties
-- For banks: check for RBI risk assessment observations, NPA divergence reports
-- Look for monetary penalties imposed by RBI for regulatory non-compliance
-- Check if the bank/NBFC faces any regulatory action or restrictions
-
-**FLAG 31 - Whistleblower Complaints:**
-- Check the whistleblower/vigil mechanism section
-- Look for mentions of complaints received, investigated, or pending
-- Also search for fraud reported by auditors under Section 143(12)
-
-**FLAG 35 - Contingent Liabilities High:**
-- Find contingent liabilities note in the financial statements
-- Sum all contingent liabilities (tax demands, legal cases, guarantees)
-- Compare to net worth (capital + reserves for banks)
-- Flag if contingent liabilities > 20% of net worth
-
-**FLAG 36 - Debt Restructuring:**
-- Search for "restructuring", "one-time settlement", "OTS", "CDR", "SDR"
-- Check for "change in repayment terms", "moratorium", "standstill"
-- For banks: check if the bank itself has been subject to PCA (Prompt Corrective Action)
-
-**FLAG 37 - Asset Pledging:**
-- Look for "charge created", "assets pledged", "security offered"
-- Check borrowing notes for details of assets pledged
-- Flag if significant portion of assets (>30%) are pledged
-
-**FLAG 57 - CASA Ratio Declining (BANK-SPECIFIC):**
-- Find the CASA (Current Account Savings Account) ratio disclosure
-- Usually reported in management commentary, operating metrics, deposit breakdown or presentation.
-- Check current year CASA ratio vs previous year
+**FLAG B25 (125) - CASA Ratio Erosion:**
+- Find CASA (Current Account + Savings Account) ratio in the report
+- Usually in management commentary, key ratios table, or deposit breakdown
 - Flag if CASA ratio declined by >300 basis points (3 percentage points) YoY
-- Also flag if CASA ratio is below 30% (indicates high dependence on costly term deposits)
-- A declining CASA ratio means the bank's cost of funds is increasing
+- Also flag if CASA ratio is below 30% (high dependence on costly term deposits)
+- A declining CASA means rising cost of funds
 
-**FLAG 58 - Provision Coverage Ratio Declining (BANK-SPECIFIC):**
-- Find the Provision Coverage Ratio (PCR) in the asset quality section
-- PCR = Provisions held / Gross NPAs
-- Check current year PCR vs previous year
-- Flag if PCR declined by >5 percentage points YoY (e.g., from 75% to 69%)
-- Also flag if PCR is below 60% (inadequate coverage of bad loans)
-- Look in Basel III disclosures, asset quality section, or key ratios table
+**FLAG B26 (126) - Contingent Liability Overload:**
+- Find Schedule 12 (Contingent Liabilities) or equivalent
+- Sum up: Guarantees Given + Letters of Credit + other off-balance-sheet exposures
+- Compare to Net Worth (Capital + Reserves)
+- Flag if total off-balance-sheet guarantees + LCs exceed 5x Net Worth
+- If these contingent liabilities are invoked, the bank is wiped out
 
-**FLAG 59 - Restructured Book Increasing (BANK-SPECIFIC):**
-- Search for "restructured advances", "restructured book", "restructured accounts"
-- Check the asset quality notes and Schedule 11/12
-- Flag if restructured advances increased >20% YoY
-- Also flag if restructured book exceeds 2% of gross advances
-- Look for MSME restructuring, COVID restructuring carryovers, or other restructuring schemes
-- High restructured book suggests hidden stress that may become future NPAs
+**FLAG B27 (127) - Deferred Tax Asset (DTA) Bloat:**
+- Check "Other Assets" section for Deferred Tax Assets (DTA)
+- Track if DTA grew rapidly in the current year
+- A sudden large DTA creation means the bank is booking future tax benefits on losses
+- This artificially boosts Book Value — flag if DTA grew >50% YoY or is >5% of Net Worth
 
-**FLAG 40 - Revenue Recognition Policy Change:**
-- Check accounting policies section for changes in revenue/interest income recognition
-- For banks: check for changes in interest recognition on advances, fee income recognition
-- Recent changes to revenue recognition methods are a concern
+**FLAG B28 (128) - Related Party Transactions:**
+- Find the Related Party Disclosures note
+- Look for: loans given to director-related entities, investments in related parties, service fees paid to promoter companies
+- Focus specifically on NON-SUBSIDIARY related parties (not consolidated subsidiaries)
+- Flag if there are high-value transactions (>1% of advances or >5% of net profit) with non-subsidiary related parties
+- This is a siphoning risk indicator
 
-**FLAG 41 - Unbilled Revenue High:**
-- Search for "unbilled revenue", "accrued interest", "contract assets"
-- For banks: check accrued interest on advances (interest recognized but not received)
-- Compare to total revenue and flag if > 10% and growing
+**FLAG B29 (129) - Auditor Remuneration Skew:**
+- Find "Payments to Auditors" or "Statutory Auditor Remuneration" note
+- Identify: (1) Statutory audit fees, (2) Tax audit fees, (3) Non-audit/consulting fees
+- Calculate: Non-audit fees / Statutory audit fees ratio
+- Flag if non-audit fees EXCEED statutory audit fees
+- When auditors earn more from consulting than auditing, their independence is compromised
 
-**FLAG 42 - MD&A Tone Defensive:**
-- Read the Management Discussion & Analysis (MD&A) section
-- Look for excessive blame on external factors (RBI policy, global factors)
-- Check for absence of quantitative targets on asset quality improvement
-- Compare management commentary with actual financial performance
+**FLAG B30 (130) - Top 20 Borrowers Exposure:**
+- Find "Concentration of Advances" or "Top 20 Borrowers" disclosure (Basel III Pillar 3 or credit risk note)
+- Check: Total advances to Top 20 borrowers / Total Gross Advances
+- Flag if Top 20 borrowers represent >15-20% of Total Advances
+- Also check if individual single-borrower limit breaches are disclosed
 
-**FLAG 51 - JV/Associate Loss Hiding:**
-- Check for investments in joint ventures and associates
-- Look for share of profit/loss from associates and JVs in the P&L
-- Flag if JVs/associates have reported losses for 2+ consecutive years
-- Check for significant impairment/write-down of JV/associate investments
+**FLAG B31 (131) - Sectoral Concentration:**
+- Find sector-wise or industry-wise credit exposure breakdown
+- Check exposure to volatile/high-risk sectors: Real Estate, Aviation, Infrastructure, Gems & Jewellery
+- Flag if exposure to any single high-risk sector exceeds 20% of total advances
+- Also look for RBI-mandated disclosures on sectors under stress
+
+**FLAG B32 (132) - Auditor Qualifications:**
+- Read the Independent Auditor's Report carefully from beginning to end
+- Look for: "Qualified Opinion", "Adverse Opinion", "Disclaimer of Opinion"
+- Also look for "Emphasis of Matter" paragraphs regarding: NPA classification, provisioning adequacy, going concern
+- Any "Material Uncertainty" language about the bank's ability to continue operations
+- An "Unmodified Opinion" with no Emphasis of Matter = NOT triggered
+- Even a single Emphasis of Matter about asset quality or provisioning = TRIGGERED
 
 Remember: Return ONLY the JSON object, no other text. Be precise and cite specific page numbers, amounts, or quotes from the report where possible.
 """
@@ -949,12 +846,15 @@ def _fix_truncated_json(json_str: str) -> str:
 
 
 def analyze_pdf_with_gemini(pdf_path: str, api_key: str = None, is_financial_sector: bool = False) -> Dict:
-    """Analyze an annual report PDF using Gemini. Non-banks: 22 flags, Banks: 24 flags.
+    """Analyze an annual report PDF using Gemini. Non-banks: 22 flags, Banks: 17 flags (B16-B32).
+
+    Banks get a completely separate flag set (B16/116 through B32/132) — no non-bank flags.
+    Non-banks continue using the original 22 flags (#2-#51).
 
     Args:
         pdf_path: Path to the annual report PDF file
         api_key: Gemini API key (or set GEMINI_API_KEY env var)
-        is_financial_sector: If True, use bank-specific prompt with CASA/PCR/restructured flags
+        is_financial_sector: If True, use bank-specific prompt (17 bank-only flags B16-B32)
 
     Returns:
         Dict with flag results from Gemini analysis

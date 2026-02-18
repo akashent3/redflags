@@ -49,7 +49,8 @@ def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[D
     Banks use completely different field schemas from FinEdge API, so we run
     separate flag sets for financial vs non-financial sector companies.
 
-    Non-banks: 21 flags | Banks: 8 flags (5 bank-specific + 3 promoter)
+    Non-banks: 21 flags | Banks: 15 flags (B1-B15, flag_numbers 101-115) + 3 promoter flags
+    Banking flags are a complete revamp — only these 15 new flags shown for banks/NBFCs.
     """
     pl = data.get("pl_annual", [])
     bs = data.get("bs_annual", [])
@@ -66,15 +67,28 @@ def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[D
 
     if is_financial_sector:
         # ===== BANK / NBFC / FINANCIAL SERVICES =====
-        # Bank PL uses: interestEarned, interestExpended, profitLossBeforeTax,
-        #   profitLossForThePeriod, percentageOfGrossNpa, percentageOfNpa,
-        #   cET1Ratio, additionalTier1Ratio, provisionsForLoanLoss
-        # Bank BS uses: deposits, advances, borrowings, capital, reserves, assets
-        flags.append(_check_gnpa_rising(pl_years))                              # #52
-        flags.append(_check_nnpa_high(pl_years))                                # #53
-        flags.append(_check_nim_compression(pl_years, bs_years))                # #54
-        flags.append(_check_cd_ratio(bs_years))                                 # #55
-        flags.append(_check_capital_adequacy(pl_years))                         # #56
+        # Complete revamp — 15 new API-calculated flags (B1–B15)
+        # Bank PL fields: interestEarned, interestExpended, interestOrDiscountOnAdvancesOrBills,
+        #   profitLossForThePeriod, percentageOfGrossNpa, percentageOfNpa, grossNonPerformingAssets,
+        #   nonPerformingAssets, cET1Ratio, additionalTier1Ratio, provisionsForLoanLoss,
+        #   employeesCost, otherOperatingExpenses, otherIncome, income, revenueOnInvestments
+        # Bank BS fields: deposits, advances, borrowings, capital, reserves, assets
+        # Bank CF fields: cashFlowsFromOperatingActivities
+        flags.append(_bank_yield_on_advances(pl_years, bs_years))               # B1
+        flags.append(_bank_cost_of_funds(pl_years, bs_years))                   # B2
+        flags.append(_bank_nim_proxy(pl_years, bs_years))                       # B3
+        flags.append(_bank_cost_to_income(pl_years))                            # B4
+        flags.append(_bank_provision_coverage_ratio(pl_years))                  # B5
+        flags.append(_bank_credit_cost(pl_years, bs_years))                     # B6
+        flags.append(_bank_texas_ratio(pl_years, bs_years))                     # B7
+        flags.append(_bank_roa(pl_years, bs_years))                             # B8
+        flags.append(_bank_roe(pl_years, bs_years))                             # B9
+        flags.append(_bank_cfo_to_pat(pl_years, cf_years))                      # B10
+        flags.append(_bank_treasury_dependence(pl_years))                       # B11
+        flags.append(_bank_employee_cost_burden(pl_years))                      # B12
+        flags.append(_bank_gross_npa_ratio(pl_years))                           # B13
+        flags.append(_bank_net_npa_ratio(pl_years))                             # B14
+        flags.append(_bank_cet1_quality(pl_years))                              # B15
     else:
         # ===== NON-FINANCIAL (MANUFACTURING, SERVICES, etc.) =====
         # Cash Flow Flags
@@ -96,6 +110,7 @@ def calculate_api_flags(data: Dict, is_financial_sector: bool = False) -> List[D
         flags.append(_check_depreciation_trajectory(pl_years, bs_years))        # #45
         flags.append(_check_implied_interest_rate(bs_years, cf_years))          # #48
         flags.append(_check_net_worth_trajectory(bs_years))                     # #49
+        flags.append(_check_tax_divergence(pl_years, cf_years))                  # #60
         # Revenue Flag
         flags.append(_check_q4_revenue(pl, pl_q))                              # #39
 
@@ -735,6 +750,72 @@ def _check_net_worth_trajectory(bs: list) -> Dict:
             "data": {"equities": equities, "declining_years": declining_years,
                      "total_decline_pct": total_decline_pct}}
 
+def _check_tax_divergence(pl: list, cf: list) -> Dict:
+    """
+    Flag #60: Tax Divergence - Cash tax vs P&L tax mismatch.
+    
+    Triggers if:
+    1. P&L tax > 1.2x cash flow tax (accruing but not paying)
+    2. Cash flow tax > 1.2x P&L tax (large DTL buildup)
+    """
+    flag = {
+        "flag_number": 60,
+        "flag_name": "Tax Divergence",
+        "category": "Revenue",
+        "severity": "HIGH",
+        "source": "API",
+        "rule": "Triggers if P&L tax > 1.2x cash flow tax OR cash flow tax > 1.2x P&L tax"
+    }
+
+    if len(pl) < 1 or len(cf) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient P&L or CF data"}
+
+    # Get latest year
+    latest_pl = pl[0]
+    latest_cf = cf[0]
+
+    # Extract values
+    tax_expense_pl = safe_get(latest_pl, "taxExpense")  # P&L tax expense
+    tax_paid_cf = safe_get(latest_cf, "incomeTaxesPaidOrRefundClassifiedAsOperating")  # Cash flow tax paid
+
+    if tax_expense_pl == 0 and tax_paid_cf == 0:
+        return {**flag, "triggered": False, "reason": "No tax data available"}
+
+    if tax_expense_pl == 0 or tax_paid_cf == 0:
+        # If one is zero but other is significant
+        if tax_expense_pl > 1000000 or abs(tax_paid_cf) > 1000000:  # > 1 Cr
+            return {**flag, "triggered": True, "confidence": 80,
+                    "evidence": f"Extreme divergence: P&L tax {fmt_b(tax_expense_pl)}, Cash tax {fmt_b(tax_paid_cf)}. "
+                                f"Company may be deferring tax payments or understating liability.",
+                    "data": {"tax_expense_pl": tax_expense_pl, "tax_paid_cf": tax_paid_cf}}
+        return {**flag, "triggered": False, "reason": "Minimal tax amounts"}
+
+    # Calculate ratio
+    pl_to_cf_ratio = tax_expense_pl / abs(tax_paid_cf) if tax_paid_cf != 0 else 0
+    cf_to_pl_ratio = abs(tax_paid_cf) / tax_expense_pl if tax_expense_pl != 0 else 0
+
+    triggered = False
+    evidence = ""
+
+    # Case 1: P&L tax > 1.2x Cash tax (accruing but not paying)
+    if pl_to_cf_ratio > 1.2:
+        triggered = True
+        evidence = (f"P&L tax ({fmt_b(tax_expense_pl)}) exceeds cash tax paid ({fmt_b(tax_paid_cf)}) by "
+                   f"{pl_to_cf_ratio:.2f}x. Company is accruing tax liabilities faster than paying them, "
+                   f"indicating potential cash flow stress or P&L understatement of tax.")
+
+    # Case 2: Cash tax > 1.2x P&L tax (large DTL buildup)
+    elif cf_to_pl_ratio > 1.2:
+        triggered = True
+        evidence = (f"Cash tax paid ({fmt_b(tax_paid_cf)}) exceeds P&L tax ({fmt_b(tax_expense_pl)}) by "
+                   f"{cf_to_pl_ratio:.2f}x. Large Deferred Tax Liability (DTL) buildup suggests aggressive "
+                   f"depreciation/deductions to boost P&L earnings while delaying actual tax payments.")
+
+    return {**flag, "triggered": triggered, "confidence": 75 if triggered else 0,
+            "evidence": evidence if triggered else f"Tax divergence within acceptable range (ratio: {min(pl_to_cf_ratio, cf_to_pl_ratio):.2f}x)",
+            "data": {"tax_expense_pl": tax_expense_pl, "tax_paid_cf": tax_paid_cf,
+                     "pl_to_cf_ratio": pl_to_cf_ratio, "cf_to_pl_ratio": cf_to_pl_ratio}}
+
 
 # ---------------------------------------------------------------------------
 # Category 7: Revenue Flag
@@ -783,176 +864,557 @@ def _check_q4_revenue(pl_annual: list, pl_quarterly: list) -> Dict:
 
 
 # ===========================================================================
-# BANK / NBFC / FINANCIAL SERVICES SPECIFIC FLAGS
-# These use bank-specific FinEdge API field names which are completely
-# different from the standard (non-bank) schema.
+# BANK / NBFC / FINANCIAL SERVICES — COMPLETE FLAG SET (B1–B15)
+# Complete revamp. These replace the old #52–#56 flags entirely.
+# Flag IDs use a dedicated banking block: B1–B15 (stored as flag_number 101–115).
+# All use bank-specific FinEdge API field names.
 # ===========================================================================
 
-def _check_gnpa_rising(pl: list) -> Dict:
-    """Flag #52: Gross NPA % rising YoY or above 3%."""
-    flag = {"flag_number": 52, "flag_name": "Gross NPA Rising",
-            "category": "Balance Sheet", "severity": "CRITICAL", "source": "API",
-            "rule": "Triggers if Gross NPA % increased YoY or exceeds 3% of gross advances"}
-
-    if len(pl) < 2:
-        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years)"}
-
-    gnpa_current = safe_get(pl[0], "percentageOfGrossNpa")
-    gnpa_prev = safe_get(pl[1], "percentageOfGrossNpa")
-
-    if gnpa_current == 0 and gnpa_prev == 0:
-        return {**flag, "triggered": False, "reason": "No GNPA data available"}
-
-    increasing = gnpa_current > gnpa_prev and gnpa_prev > 0
-    above_threshold = gnpa_current > 3.0
-    triggered = increasing or above_threshold
-
-    return {**flag, "triggered": triggered, "confidence": 85 if triggered else 0,
-            "evidence": f"GNPA: {gnpa_current:.2f}% (prev: {gnpa_prev:.2f}%). "
-                        f"{'Increasing YoY. ' if increasing else ''}"
-                        f"{'Above 3% threshold!' if above_threshold else ''}",
-            "data": {"gnpa_current": gnpa_current, "gnpa_prev": gnpa_prev}}
-
-
-def _check_nnpa_high(pl: list) -> Dict:
-    """Flag #53: Net NPA % rising or above 1.5%."""
-    flag = {"flag_number": 53, "flag_name": "Net NPA High",
-            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
-            "rule": "Triggers if Net NPA % increased YoY or exceeds 1.5%"}
-
-    if len(pl) < 2:
-        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years)"}
-
-    nnpa_current = safe_get(pl[0], "percentageOfNpa")
-    nnpa_prev = safe_get(pl[1], "percentageOfNpa")
-
-    if nnpa_current == 0 and nnpa_prev == 0:
-        return {**flag, "triggered": False, "reason": "No NNPA data available"}
-
-    increasing = nnpa_current > nnpa_prev and nnpa_prev > 0
-    above_threshold = nnpa_current > 1.5
-    triggered = increasing or above_threshold
-
-    return {**flag, "triggered": triggered, "confidence": 85 if triggered else 0,
-            "evidence": f"NNPA: {nnpa_current:.2f}% (prev: {nnpa_prev:.2f}%). "
-                        f"{'Increasing YoY. ' if increasing else ''}"
-                        f"{'Above 1.5% threshold!' if above_threshold else ''}",
-            "data": {"nnpa_current": nnpa_current, "nnpa_prev": nnpa_prev}}
-
-
-def _check_nim_compression(pl: list, bs: list) -> Dict:
-    """Flag #54: Net Interest Margin declining >30bps YoY."""
-    flag = {"flag_number": 54, "flag_name": "NIM Compression",
-            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
-            "rule": "Triggers if Net Interest Margin declined >30 basis points YoY"}
-
-    if len(pl) < 2 or len(bs) < 2:
-        return {**flag, "triggered": False, "reason": "Insufficient data (need 2 years)"}
-
-    def calc_nim(pl_data, bs_data):
-        interest_earned = safe_get(pl_data, "interestEarned")
-        interest_expended = safe_get(pl_data, "interestExpended")
-        total_assets = safe_get(bs_data, "assets")
-        if total_assets <= 0:
-            return 0
-        return (interest_earned - interest_expended) / total_assets * 100
-
-    nim_current = calc_nim(pl[0], bs[0])
-    nim_prev = calc_nim(pl[1], bs[1])
-
-    if nim_current == 0 and nim_prev == 0:
-        return {**flag, "triggered": False, "reason": "Cannot calculate NIM"}
-
-    decline_bps = (nim_prev - nim_current) * 100  # in basis points
-    triggered = decline_bps > 30
-
-    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
-            "evidence": f"NIM: {nim_current:.2f}% (prev: {nim_prev:.2f}%), "
-                        f"Change: {-decline_bps:+.0f} bps",
-            "data": {"nim_current": nim_current, "nim_prev": nim_prev,
-                     "decline_bps": decline_bps}}
-
-
-def _check_cd_ratio(bs: list) -> Dict:
-    """Flag #55: Credit-to-Deposit ratio abnormal."""
-    flag = {"flag_number": 55, "flag_name": "Credit-Deposit Ratio Abnormal",
+def _bank_yield_on_advances(pl: list, bs: list) -> Dict:
+    """Bank Flag B1: Yield on Advances — outside industry range 8-10%."""
+    flag = {"flag_number": 101, "flag_name": "Yield on Advances",
             "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
-            "rule": "Triggers if CD ratio >80% (liquidity risk) or <55% (poor lending efficiency)"}
+            "rule": "Triggers if Yield on Advances is outside 8-10% industry range. "
+                    "Formula: (interestOrDiscountOnAdvancesOrBills / advances) * 100"}
 
-    if len(bs) < 1:
+    if len(pl) < 1 or len(bs) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
 
+    interest_on_adv = safe_get(pl[0], "interestOrDiscountOnAdvancesOrBills")
     advances = safe_get(bs[0], "advances")
-    deposits = safe_get(bs[0], "deposits")
 
-    if deposits <= 0:
-        return {**flag, "triggered": False, "reason": "No deposit data available"}
+    if advances <= 0:
+        return {**flag, "triggered": False, "reason": "No advances data"}
 
-    cd_ratio = (advances / deposits) * 100
-    triggered = cd_ratio > 80 or cd_ratio < 55
+    yield_pct = (interest_on_adv / advances) * 100
+    triggered = yield_pct < 8.0 or yield_pct > 10.0
 
-    if cd_ratio > 80:
-        direction = "High - liquidity risk"
-    elif cd_ratio < 55:
-        direction = "Low - poor lending efficiency"
+    if yield_pct < 8.0:
+        direction = "Low — possible under-reporting of interest income or stressed book"
+    elif yield_pct > 10.0:
+        direction = "High — aggressive lending to risky borrowers"
     else:
-        direction = "Normal range"
-
-    trend = ""
-    if len(bs) >= 2:
-        prev_adv = safe_get(bs[1], "advances")
-        prev_dep = safe_get(bs[1], "deposits")
-        if prev_dep > 0:
-            prev_cd = (prev_adv / prev_dep) * 100
-            trend = f" (prev: {prev_cd:.1f}%)"
+        direction = "Within industry range (8-10%)"
 
     return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
-            "evidence": f"CD ratio: {cd_ratio:.1f}%{trend} - {direction}. "
-                        f"Advances: {fmt_b(advances)}, Deposits: {fmt_b(deposits)}",
-            "data": {"cd_ratio": cd_ratio, "advances": advances, "deposits": deposits}}
+            "evidence": f"Yield on Advances: {yield_pct:.2f}% — {direction}. "
+                        f"Interest on advances: {fmt_b(interest_on_adv)}, Advances: {fmt_b(advances)}",
+            "data": {"yield_pct": yield_pct, "interest_on_adv": interest_on_adv, "advances": advances}}
 
 
-def _check_capital_adequacy(pl: list) -> Dict:
-    """Flag #56: Capital adequacy ratio near regulatory minimum."""
-    flag = {"flag_number": 56, "flag_name": "Capital Adequacy Low",
-            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
-            "rule": "Triggers if CET1 <7% or Tier-1 <9.5% or Tier-1 declined >1.5pp YoY"}
+def _bank_cost_of_funds(pl: list, bs: list) -> Dict:
+    """Bank Flag B2: Cost of Funds — above 5% industry benchmark."""
+    flag = {"flag_number": 102, "flag_name": "Cost of Funds",
+            "category": "Balance Sheet", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if Cost of Funds exceeds 5% (industry avg 4-5%). "
+                    "Formula: (interestExpended / (deposits + borrowings)) * 100"}
+
+    if len(pl) < 1 or len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    interest_expended = safe_get(pl[0], "interestExpended")
+    deposits = safe_get(bs[0], "deposits")
+    borrowings = safe_get(bs[0], "borrowings")
+    total_funds = deposits + borrowings
+
+    if total_funds <= 0:
+        return {**flag, "triggered": False, "reason": "No deposits/borrowings data"}
+
+    cost_pct = (interest_expended / total_funds) * 100
+    triggered = cost_pct > 5.0
+
+    trend = ""
+    if len(pl) >= 2 and len(bs) >= 2:
+        prev_exp = safe_get(pl[1], "interestExpended")
+        prev_dep = safe_get(bs[1], "deposits")
+        prev_bor = safe_get(bs[1], "borrowings")
+        prev_funds = prev_dep + prev_bor
+        if prev_funds > 0:
+            prev_cost = (prev_exp / prev_funds) * 100
+            trend = f" (prev: {prev_cost:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"Cost of Funds: {cost_pct:.2f}%{trend}. "
+                        f"Interest expended: {fmt_b(interest_expended)}, "
+                        f"Total funds (deposits+borrowings): {fmt_b(total_funds)}",
+            "data": {"cost_pct": cost_pct, "interest_expended": interest_expended,
+                     "deposits": deposits, "borrowings": borrowings}}
+
+
+def _bank_nim_proxy(pl: list, bs: list) -> Dict:
+    """Bank Flag B3: Net Interest Margin (NIM) Proxy — below 3%."""
+    flag = {"flag_number": 103, "flag_name": "Net Interest Margin (NIM) Proxy",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if NIM proxy falls below 3% (healthy threshold). "
+                    "Formula: ((interestEarned - interestExpended) / assets) * 100"}
+
+    if len(pl) < 1 or len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    interest_earned = safe_get(pl[0], "interestEarned")
+    interest_expended = safe_get(pl[0], "interestExpended")
+    assets = safe_get(bs[0], "assets")
+
+    if assets <= 0:
+        return {**flag, "triggered": False, "reason": "No assets data"}
+
+    nim = ((interest_earned - interest_expended) / assets) * 100
+    triggered = nim < 3.0
+
+    trend = ""
+    if len(pl) >= 2 and len(bs) >= 2:
+        prev_ie = safe_get(pl[1], "interestEarned")
+        prev_ix = safe_get(pl[1], "interestExpended")
+        prev_a = safe_get(bs[1], "assets")
+        if prev_a > 0:
+            prev_nim = ((prev_ie - prev_ix) / prev_a) * 100
+            trend = f" (prev: {prev_nim:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 75 if triggered else 0,
+            "evidence": f"NIM: {nim:.2f}%{trend}. "
+                        f"Net interest income: {fmt_b(interest_earned - interest_expended)}, "
+                        f"Total assets: {fmt_b(assets)}",
+            "data": {"nim": nim, "interest_earned": interest_earned,
+                     "interest_expended": interest_expended, "assets": assets}}
+
+
+def _bank_cost_to_income(pl: list) -> Dict:
+    """Bank Flag B4: Cost-to-Income Ratio — above 50% (inefficient)."""
+    flag = {"flag_number": 104, "flag_name": "Cost-to-Income Ratio",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if Cost-to-Income Ratio exceeds 50%. Efficient banks are below 50%. "
+                    "Formula: ((employeesCost + otherOperatingExpenses) / "
+                    "((interestEarned - interestExpended) + otherIncome)) * 100"}
 
     if len(pl) < 1:
         return {**flag, "triggered": False, "reason": "Insufficient data"}
 
-    cet1 = safe_get(pl[0], "cET1Ratio")
-    at1 = safe_get(pl[0], "additionalTier1Ratio")
-    tier1 = cet1 + at1
+    employees_cost = safe_get(pl[0], "employeesCost")
+    other_opex = safe_get(pl[0], "otherOperatingExpenses")
+    interest_earned = safe_get(pl[0], "interestEarned")
+    interest_expended = safe_get(pl[0], "interestExpended")
+    other_income = safe_get(pl[0], "otherIncome")
 
-    if cet1 == 0:
-        return {**flag, "triggered": False, "reason": "No capital adequacy data available"}
+    net_income = (interest_earned - interest_expended) + other_income
+    total_opex = employees_cost + other_opex
 
-    low_cet1 = cet1 < 7.0
-    low_tier1 = tier1 < 9.5
+    if net_income <= 0:
+        return {**flag, "triggered": False, "reason": "Non-positive net income — cannot calculate ratio"}
+
+    cir = (total_opex / net_income) * 100
+    triggered = cir > 50.0
+
+    return {**flag, "triggered": triggered, "confidence": 75 if triggered else 0,
+            "evidence": f"Cost-to-Income Ratio: {cir:.2f}%. "
+                        f"Total OpEx: {fmt_b(total_opex)}, Net Income: {fmt_b(net_income)}. "
+                        f"{'Above 50% — operationally inefficient.' if triggered else 'Efficient (<50%).'}",
+            "data": {"cir": cir, "total_opex": total_opex, "net_income": net_income,
+                     "employees_cost": employees_cost, "other_opex": other_opex}}
+
+
+def _bank_provision_coverage_ratio(pl: list) -> Dict:
+    """Bank Flag B5: Provision Coverage Ratio (PCR) — below 70% (under-provisioned)."""
+    flag = {"flag_number": 105, "flag_name": "Provision Coverage Ratio (PCR)",
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if PCR falls below 70% (preferred threshold). "
+                    "Formula: ((grossNonPerformingAssets - nonPerformingAssets) / "
+                    "grossNonPerformingAssets) * 100"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    gnpa = safe_get(pl[0], "grossNonPerformingAssets")
+    nnpa = safe_get(pl[0], "nonPerformingAssets")
+
+    if gnpa <= 0:
+        return {**flag, "triggered": False, "reason": "No GNPA data — cannot calculate PCR"}
+
+    pcr = ((gnpa - nnpa) / gnpa) * 100
+    triggered = pcr < 70.0
+
+    trend = ""
+    if len(pl) >= 2:
+        prev_gnpa = safe_get(pl[1], "grossNonPerformingAssets")
+        prev_nnpa = safe_get(pl[1], "nonPerformingAssets")
+        if prev_gnpa > 0:
+            prev_pcr = ((prev_gnpa - prev_nnpa) / prev_gnpa) * 100
+            trend = f" (prev: {prev_pcr:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+            "evidence": f"PCR: {pcr:.2f}%{trend}. "
+                        f"GNPA: {fmt_b(gnpa)}, NNPA: {fmt_b(nnpa)}, "
+                        f"Provisions: {fmt_b(gnpa - nnpa)}. "
+                        f"{'Below 70% — under-provisioned, masking bad loan severity.' if triggered else 'Adequately provisioned.'}",
+            "data": {"pcr": pcr, "gnpa": gnpa, "nnpa": nnpa}}
+
+
+def _bank_credit_cost(pl: list, bs: list) -> Dict:
+    """Bank Flag B6: Credit Cost — above 1% (elevated loan loss expense)."""
+    flag = {"flag_number": 106, "flag_name": "Credit Cost",
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if Credit Cost exceeds 1% of total advances. "
+                    "Formula: (provisionsForLoanLoss / advances) * 100"}
+
+    if len(pl) < 1 or len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    provisions = safe_get(pl[0], "provisionsForLoanLoss")
+    advances = safe_get(bs[0], "advances")
+
+    if advances <= 0:
+        return {**flag, "triggered": False, "reason": "No advances data"}
+
+    credit_cost = (provisions / advances) * 100
+    triggered = credit_cost > 1.0
+
+    trend = ""
+    if len(pl) >= 2 and len(bs) >= 2:
+        prev_prov = safe_get(pl[1], "provisionsForLoanLoss")
+        prev_adv = safe_get(bs[1], "advances")
+        if prev_adv > 0:
+            prev_cc = (prev_prov / prev_adv) * 100
+            trend = f" (prev: {prev_cc:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 75 if triggered else 0,
+            "evidence": f"Credit Cost: {credit_cost:.2f}%{trend}. "
+                        f"Provisions for loan loss: {fmt_b(provisions)}, Advances: {fmt_b(advances)}. "
+                        f"{'Above 1% — hidden NPAs surfacing.' if triggered else 'Stable (<1%).'}",
+            "data": {"credit_cost": credit_cost, "provisions": provisions, "advances": advances}}
+
+
+def _bank_texas_ratio(pl: list, bs: list) -> Dict:
+    """Bank Flag B7: Texas Ratio — above 40% (dangerous solvency signal)."""
+    flag = {"flag_number": 107, "flag_name": "Texas Ratio",
+            "category": "Balance Sheet", "severity": "CRITICAL", "source": "API",
+            "rule": "Triggers if Texas Ratio exceeds 40% — signals bank solvency risk. "
+                    "Formula: (grossNonPerformingAssets / (capital + reserves)) * 100"}
+
+    if len(pl) < 1 or len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    gnpa = safe_get(pl[0], "grossNonPerformingAssets")
+    capital = safe_get(bs[0], "capital")
+    reserves = safe_get(bs[0], "reserves")
+    equity = capital + reserves
+
+    if equity <= 0:
+        return {**flag, "triggered": True, "confidence": 100,
+                "evidence": "Negative/zero equity — extreme solvency risk. GNPA cannot be covered.",
+                "data": {"gnpa": gnpa, "equity": equity, "texas_ratio": None}}
+
+    texas_ratio = (gnpa / equity) * 100
+    triggered = texas_ratio > 40.0
+
+    risk_label = ""
+    if texas_ratio > 100:
+        risk_label = "EXTREME — NPAs exceed entire equity base!"
+    elif texas_ratio > 40:
+        risk_label = "DANGEROUS — bank solvency at risk"
+    else:
+        risk_label = "Safe (strong capital buffer)"
+
+    return {**flag, "triggered": triggered, "confidence": 100 if triggered else 0,
+            "evidence": f"Texas Ratio: {texas_ratio:.2f}% — {risk_label}. "
+                        f"GNPA: {fmt_b(gnpa)}, Equity (capital+reserves): {fmt_b(equity)}",
+            "data": {"texas_ratio": texas_ratio, "gnpa": gnpa, "equity": equity}}
+
+
+def _bank_roa(pl: list, bs: list) -> Dict:
+    """Bank Flag B8: Return on Assets (ROA) — below 1% (poor profitability)."""
+    flag = {"flag_number": 108, "flag_name": "Return on Assets (ROA)",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if ROA falls below 1% (excellent threshold). "
+                    "Formula: (profitLossForThePeriod / assets) * 100"}
+
+    if len(pl) < 1 or len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    pat = safe_get(pl[0], "profitLossForThePeriod")
+    assets = safe_get(bs[0], "assets")
+
+    if assets <= 0:
+        return {**flag, "triggered": False, "reason": "No assets data"}
+
+    roa = (pat / assets) * 100
+    triggered = roa < 1.0
+
+    trend = ""
+    if len(pl) >= 2 and len(bs) >= 2:
+        prev_pat = safe_get(pl[1], "profitLossForThePeriod")
+        prev_assets = safe_get(bs[1], "assets")
+        if prev_assets > 0:
+            prev_roa = (prev_pat / prev_assets) * 100
+            trend = f" (prev: {prev_roa:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 70 if triggered else 0,
+            "evidence": f"ROA: {roa:.2f}%{trend}. "
+                        f"PAT: {fmt_b(pat)}, Total Assets: {fmt_b(assets)}. "
+                        f"{'Below 1% — weak profitability relative to asset base.' if triggered else 'Strong (>1%).'}",
+            "data": {"roa": roa, "pat": pat, "assets": assets}}
+
+
+def _bank_roe(pl: list, bs: list) -> Dict:
+    """Bank Flag B9: Return on Equity (ROE) — below 12%."""
+    flag = {"flag_number": 109, "flag_name": "Return on Equity (ROE)",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if ROE falls below 12% (healthy benchmark 12-15%). "
+                    "Formula: (profitLossForThePeriod / (capital + reserves)) * 100"}
+
+    if len(pl) < 1 or len(bs) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    pat = safe_get(pl[0], "profitLossForThePeriod")
+    capital = safe_get(bs[0], "capital")
+    reserves = safe_get(bs[0], "reserves")
+    equity = capital + reserves
+
+    if equity <= 0:
+        return {**flag, "triggered": False, "reason": "Negative/zero equity"}
+
+    roe = (pat / equity) * 100
+    triggered = roe < 12.0
+
+    trend = ""
+    if len(pl) >= 2 and len(bs) >= 2:
+        prev_pat = safe_get(pl[1], "profitLossForThePeriod")
+        prev_cap = safe_get(bs[1], "capital")
+        prev_res = safe_get(bs[1], "reserves")
+        prev_eq = prev_cap + prev_res
+        if prev_eq > 0:
+            prev_roe = (prev_pat / prev_eq) * 100
+            trend = f" (prev: {prev_roe:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 65 if triggered else 0,
+            "evidence": f"ROE: {roe:.2f}%{trend}. "
+                        f"PAT: {fmt_b(pat)}, Equity (capital+reserves): {fmt_b(equity)}. "
+                        f"{'Below 12% — insufficient shareholder returns.' if triggered else 'Healthy (12-15%+).'}",
+            "data": {"roe": roe, "pat": pat, "equity": equity}}
+
+
+def _bank_cfo_to_pat(pl: list, cf: list) -> Dict:
+    """Bank Flag B10: CFO to PAT Ratio — below 1.0x (earnings not cash-backed)."""
+    flag = {"flag_number": 110, "flag_name": "CFO to PAT Ratio (Earnings Quality)",
+            "category": "Cash Flow", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if CFO/PAT ratio falls below 1.0x — profits not supported by operating cash. "
+                    "Formula: cashFlowsFromOperatingActivities / profitLossForThePeriod"}
+
+    if len(pl) < 1 or len(cf) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    cfo = safe_get(cf[0], "cashFlowsFromOperatingActivities")
+    pat = safe_get(pl[0], "profitLossForThePeriod")
+
+    if pat <= 0:
+        return {**flag, "triggered": False, "reason": "Non-positive PAT — ratio not meaningful"}
+
+    ratio = cfo / pat
+    triggered = ratio < 1.0
+
+    trend = ""
+    if len(pl) >= 2 and len(cf) >= 2:
+        prev_cfo = safe_get(cf[1], "cashFlowsFromOperatingActivities")
+        prev_pat = safe_get(pl[1], "profitLossForThePeriod")
+        if prev_pat > 0:
+            prev_ratio = prev_cfo / prev_pat
+            trend = f" (prev: {prev_ratio:.2f}x)"
+
+    return {**flag, "triggered": triggered, "confidence": 80 if triggered else 0,
+            "evidence": f"CFO/PAT: {ratio:.2f}x{trend}. "
+                        f"CFO: {fmt_b(cfo)}, PAT: {fmt_b(pat)}. "
+                        f"{'Below 1.0x — reported profits not backed by operating cash. Earnings quality concern.' if triggered else 'High quality (>1.0x) — cash-backed profits.'}",
+            "data": {"ratio": ratio, "cfo": cfo, "pat": pat}}
+
+
+def _bank_treasury_dependence(pl: list) -> Dict:
+    """Bank Flag B11: Treasury Dependence — above 20% of total income (risky)."""
+    flag = {"flag_number": 111, "flag_name": "Treasury Dependence",
+            "category": "Cash Flow", "severity": "MEDIUM", "source": "API",
+            "rule": "Triggers if Treasury/Investment income exceeds 20% of total income. "
+                    "Formula: (revenueOnInvestments / income) * 100"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    rev_investments = safe_get(pl[0], "revenueOnInvestments")
+    total_income = safe_get(pl[0], "income")
+
+    if total_income <= 0:
+        return {**flag, "triggered": False, "reason": "No income data"}
+
+    treasury_pct = (rev_investments / total_income) * 100
+    triggered = treasury_pct > 20.0
+
+    trend = ""
+    if len(pl) >= 2:
+        prev_ri = safe_get(pl[1], "revenueOnInvestments")
+        prev_inc = safe_get(pl[1], "income")
+        if prev_inc > 0:
+            prev_pct = (prev_ri / prev_inc) * 100
+            trend = f" (prev: {prev_pct:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 65 if triggered else 0,
+            "evidence": f"Treasury Dependence: {treasury_pct:.2f}%{trend}. "
+                        f"Investment income: {fmt_b(rev_investments)}, Total income: {fmt_b(total_income)}. "
+                        f"{'Above 20% — over-reliance on volatile trading/treasury gains.' if triggered else 'Safe (<20%).'}",
+            "data": {"treasury_pct": treasury_pct, "rev_investments": rev_investments,
+                     "total_income": total_income}}
+
+
+def _bank_employee_cost_burden(pl: list) -> Dict:
+    """Bank Flag B12: Employee Cost Burden — above 20% of net income."""
+    flag = {"flag_number": 112, "flag_name": "Employee Cost Burden",
+            "category": "Cash Flow", "severity": "LOW", "source": "API",
+            "rule": "Triggers if Employee Cost exceeds 20% of net income (standard range 15-20%). "
+                    "Formula: (employeesCost / ((interestEarned - interestExpended) + otherIncome)) * 100"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    employees_cost = safe_get(pl[0], "employeesCost")
+    interest_earned = safe_get(pl[0], "interestEarned")
+    interest_expended = safe_get(pl[0], "interestExpended")
+    other_income = safe_get(pl[0], "otherIncome")
+
+    net_income = (interest_earned - interest_expended) + other_income
+
+    if net_income <= 0:
+        return {**flag, "triggered": False, "reason": "Non-positive net income"}
+
+    emp_burden = (employees_cost / net_income) * 100
+    triggered = emp_burden > 20.0
+
+    trend = ""
+    if len(pl) >= 2:
+        prev_ec = safe_get(pl[1], "employeesCost")
+        prev_ie = safe_get(pl[1], "interestEarned")
+        prev_ix = safe_get(pl[1], "interestExpended")
+        prev_oi = safe_get(pl[1], "otherIncome")
+        prev_ni = (prev_ie - prev_ix) + prev_oi
+        if prev_ni > 0:
+            prev_burden = (prev_ec / prev_ni) * 100
+            trend = f" (prev: {prev_burden:.2f}%)"
+
+    return {**flag, "triggered": triggered, "confidence": 55 if triggered else 0,
+            "evidence": f"Employee Cost Burden: {emp_burden:.2f}%{trend}. "
+                        f"Employee costs: {fmt_b(employees_cost)}, Net income: {fmt_b(net_income)}. "
+                        f"{'Above 20% — high staffing cost load.' if triggered else 'Within standard range.'}",
+            "data": {"emp_burden": emp_burden, "employees_cost": employees_cost,
+                     "net_income": net_income}}
+
+
+def _bank_gross_npa_ratio(pl: list) -> Dict:
+    """Bank Flag B13: Gross NPA Ratio — above 3% (standard threshold)."""
+    flag = {"flag_number": 113, "flag_name": "Gross NPA Ratio",
+            "category": "Balance Sheet", "severity": "CRITICAL", "source": "API",
+            "rule": "Triggers if Gross NPA Ratio exceeds 3% or is rising YoY. "
+                    "Formula: percentageOfGrossNpa * 100"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    gnpa_pct = safe_get(pl[0], "percentageOfGrossNpa")
+
+    if gnpa_pct == 0:
+        return {**flag, "triggered": False, "reason": "No GNPA % data available"}
+
+    # API returns as decimal (e.g. 0.0133 = 1.33%), convert to percentage
+    gnpa_display = gnpa_pct * 100 if gnpa_pct < 1 else gnpa_pct
+    above_threshold = gnpa_display > 3.0
+
+    rising = False
+    trend = ""
+    if len(pl) >= 2:
+        gnpa_prev = safe_get(pl[1], "percentageOfGrossNpa")
+        gnpa_prev_display = gnpa_prev * 100 if gnpa_prev < 1 else gnpa_prev
+        if gnpa_prev_display > 0:
+            rising = gnpa_display > gnpa_prev_display
+            trend = f" (prev: {gnpa_prev_display:.2f}%)"
+
+    triggered = above_threshold or rising
+
+    return {**flag, "triggered": triggered, "confidence": 90 if triggered else 0,
+            "evidence": f"Gross NPA Ratio: {gnpa_display:.2f}%{trend}. "
+                        f"{'Rising YoY. ' if rising else ''}"
+                        f"{'Above 3% threshold — poor asset quality.' if above_threshold else ''}",
+            "data": {"gnpa_pct": gnpa_display, "above_threshold": above_threshold, "rising": rising}}
+
+
+def _bank_net_npa_ratio(pl: list) -> Dict:
+    """Bank Flag B14: Net NPA Ratio — above 1% (below excellent threshold)."""
+    flag = {"flag_number": 114, "flag_name": "Net NPA Ratio",
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if Net NPA Ratio exceeds 1% (excellent is <1%) or is rising YoY. "
+                    "Formula: percentageOfNpa * 100"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    nnpa_pct = safe_get(pl[0], "percentageOfNpa")
+
+    if nnpa_pct == 0:
+        return {**flag, "triggered": False, "reason": "No NNPA % data available"}
+
+    nnpa_display = nnpa_pct * 100 if nnpa_pct < 1 else nnpa_pct
+    above_threshold = nnpa_display > 1.0
+
+    rising = False
+    trend = ""
+    if len(pl) >= 2:
+        nnpa_prev = safe_get(pl[1], "percentageOfNpa")
+        nnpa_prev_display = nnpa_prev * 100 if nnpa_prev < 1 else nnpa_prev
+        if nnpa_prev_display > 0:
+            rising = nnpa_display > nnpa_prev_display
+            trend = f" (prev: {nnpa_prev_display:.2f}%)"
+
+    triggered = above_threshold or rising
+
+    return {**flag, "triggered": triggered, "confidence": 85 if triggered else 0,
+            "evidence": f"Net NPA Ratio: {nnpa_display:.2f}%{trend}. "
+                        f"{'Rising YoY. ' if rising else ''}"
+                        f"{'Above 1% — post-provision asset quality concern.' if above_threshold else ''}",
+            "data": {"nnpa_pct": nnpa_display, "above_threshold": above_threshold, "rising": rising}}
+
+
+def _bank_cet1_quality(pl: list) -> Dict:
+    """Bank Flag B15: Core Capital Quality (CET1) — below regulatory minimum 8%."""
+    flag = {"flag_number": 115, "flag_name": "Core Capital Quality (CET1)",
+            "category": "Balance Sheet", "severity": "HIGH", "source": "API",
+            "rule": "Triggers if CET1 Ratio falls below 8% (regulatory minimum) or declined >1.5pp YoY. "
+                    "Formula: cET1Ratio * 100"}
+
+    if len(pl) < 1:
+        return {**flag, "triggered": False, "reason": "Insufficient data"}
+
+    cet1_raw = safe_get(pl[0], "cET1Ratio")
+
+    if cet1_raw == 0:
+        return {**flag, "triggered": False, "reason": "No CET1 data available"}
+
+    # API may return as decimal (0.1955 = 19.55%) or percentage (19.55)
+    cet1 = cet1_raw * 100 if cet1_raw < 1 else cet1_raw
+    low_cet1 = cet1 < 8.0
 
     declining = False
-    prev_tier1 = 0
+    prev_cet1 = 0
     if len(pl) >= 2:
-        prev_cet1 = safe_get(pl[1], "cET1Ratio")
-        prev_at1 = safe_get(pl[1], "additionalTier1Ratio")
-        prev_tier1 = prev_cet1 + prev_at1
-        if prev_tier1 > 0:
-            declining = (prev_tier1 - tier1) > 1.5
+        prev_raw = safe_get(pl[1], "cET1Ratio")
+        if prev_raw > 0:
+            prev_cet1 = prev_raw * 100 if prev_raw < 1 else prev_raw
+            declining = (prev_cet1 - cet1) > 1.5
 
-    triggered = low_cet1 or low_tier1 or declining
+    triggered = low_cet1 or declining
 
-    evidence = f"CET1: {cet1:.2f}%, AT1: {at1:.2f}%, Tier-1: {tier1:.2f}%"
-    if prev_tier1 > 0:
-        evidence += f" (prev Tier-1: {prev_tier1:.2f}%)"
+    evidence = f"CET1 Ratio: {cet1:.2f}%"
+    if prev_cet1 > 0:
+        evidence += f" (prev: {prev_cet1:.2f}%)"
     if low_cet1:
-        evidence += " - CET1 below 7% minimum!"
-    if low_tier1:
-        evidence += " - Tier-1 below 9.5%!"
+        evidence += " — Below 8% regulatory minimum! Capital inadequacy risk."
     if declining:
-        evidence += " - Declining >1.5pp YoY!"
+        evidence += f" — Declining >1.5pp YoY. Capital erosion in progress."
+    if not triggered:
+        evidence += f" — Well above 8% regulatory minimum. Strong capital buffer."
 
     return {**flag, "triggered": triggered, "confidence": 100 if triggered else 0,
             "evidence": evidence,
-            "data": {"cet1": cet1, "at1": at1, "tier1": tier1,
-                     "prev_tier1": prev_tier1}}
+            "data": {"cet1": cet1, "prev_cet1": prev_cet1, "low_cet1": low_cet1,
+                     "declining": declining}}

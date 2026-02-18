@@ -29,6 +29,7 @@ export interface User {
   email: string;
   full_name: string;
   is_active: boolean;
+  is_admin: boolean;
   subscription_tier: string;
   created_at: string;
 }

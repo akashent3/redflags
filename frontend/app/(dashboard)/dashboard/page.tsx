@@ -16,7 +16,6 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  Upload,
   Search,
   BarChart3,
   Loader2,
@@ -149,7 +148,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="mt-4 text-xs text-gray-500">
-            {stats?.total_reports === 0 ? 'Upload reports to see analytics' : 'Out of 100'}
+            {stats?.total_reports === 0 ? 'Search companies to see analytics' : 'Out of 100'}
           </p>
         </div>
 
@@ -201,38 +200,29 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold mb-4">🎉 Welcome to RedFlag AI!</h2>
           <p className="text-blue-100 mb-6 max-w-2xl">
             You're all set! RedFlag AI helps you analyze corporate annual reports to detect financial
-            red flags using advanced AI. Get started by uploading your first annual report or searching
-            for a company.
+            red flags using advanced AI. Get started by searching for a company or scanning your portfolio.
           </p>
           <div className="flex gap-4">
             <Button variant="secondary" onClick={() => router.push('/analyze')}>
-              <FileText className="mr-2 h-4 w-4" />
-              Analyze Report
+              <Search className="mr-2 h-4 w-4" />
+              Search Company
             </Button>
             <Button
               variant="outline"
               className="bg-transparent border-white text-white hover:bg-blue-500"
-              onClick={() => router.push('/analyze')}
+              onClick={() => router.push('/portfolio')}
             >
-              Browse Companies
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Scan Portfolio
             </Button>
           </div>
         </div>
       )}
 
-      {/* Quick Actions */}
+      {/* Quick Actions - UPLOAD REMOVED */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            className="text-left p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
-            onClick={() => router.push('/analyze')}
-          >
-            <Upload className="h-8 w-8 text-blue-600 mb-2" />
-            <h4 className="font-medium text-gray-900">Upload Report</h4>
-            <p className="text-sm text-gray-500 mt-1">Upload a PDF annual report for analysis</p>
-          </button>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
             className="text-left p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
             onClick={() => router.push('/analyze')}

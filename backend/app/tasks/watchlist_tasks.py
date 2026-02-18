@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models.analysis_result import AnalysisResult
+from app.models.annual_report import AnnualReport
 from app.models.user import User
 from app.models.watchlist import NotificationPreference, WatchlistAlert, WatchlistItem
 
@@ -29,15 +30,17 @@ def check_watchlist_alerts():
         alerts_created = 0
 
         for item in items:
-            # Get latest analysis
-            latest_analysis = db.query(AnalysisResult).filter(
-                AnalysisResult.company_id == item.company_id
+            # Get latest analysis — join via AnnualReport (AnalysisResult has no direct company_id)
+            latest_analysis = db.query(AnalysisResult).join(
+                AnnualReport, AnalysisResult.report_id == AnnualReport.id
+            ).filter(
+                AnnualReport.company_id == item.company_id
             ).order_by(AnalysisResult.created_at.desc()).first()
 
             if not latest_analysis:
                 continue
 
-            current_score = latest_analysis.overall_risk_score
+            current_score = latest_analysis.risk_score
             previous_score = item.last_known_risk_score
 
             # Check for significant change (threshold: 10 points)

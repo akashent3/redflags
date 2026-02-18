@@ -1,4 +1,4 @@
-"""Watchlist API endpoints."""
+"""Watchlist API endpoints with auto-analysis trigger."""
 
 import logging
 from typing import List, Optional
@@ -12,6 +12,7 @@ from app.models.user import User
 from app.models.watchlist import WatchlistItem, WatchlistAlert, NotificationPreference
 from app.models.company import Company
 from app.models.analysis_result import AnalysisResult
+from app.models.annual_report import AnnualReport
 from app.utils.dependencies import get_current_active_user
 from app.schemas.watchlist import (
     WatchlistItemCreate,
@@ -22,6 +23,10 @@ from app.schemas.watchlist import (
     NotificationPreferencesUpdate,
     NotificationPreferencesResponse,
 )
+# ========== NEW IMPORTS ==========
+from app.services.portfolio_service import get_real_time_price, map_broker_symbol
+from app.tasks.analysis_tasks import analyze_company_by_symbol_task
+# =================================
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +37,13 @@ router = APIRouter()
     "/",
     response_model=WatchlistResponse,
     summary="Get user's watchlist",
-    description="Get all companies in user's watchlist with risk scores and recent alerts.",
+    description="Get all companies in user's watchlist with risk scores, recent alerts, and real-time prices.",
 )
 async def get_watchlist(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Get user's complete watchlist with alerts."""
+    """Get user's complete watchlist with alerts and real-time prices."""
     try:
         # Get watchlist items
         watchlist_items = db.query(WatchlistItem).filter(
@@ -50,12 +55,14 @@ async def get_watchlist(
         for item in watchlist_items:
             company = item.company
 
-            # Get latest analysis for risk score
-            latest_analysis = db.query(AnalysisResult).filter(
-                AnalysisResult.company_id == company.id
+            # Get latest analysis for risk score — join via AnnualReport
+            latest_analysis = db.query(AnalysisResult).join(
+                AnnualReport, AnalysisResult.report_id == AnnualReport.id
+            ).filter(
+                AnnualReport.company_id == company.id
             ).order_by(AnalysisResult.created_at.desc()).first()
 
-            current_risk_score = latest_analysis.overall_risk_score if latest_analysis else None
+            current_risk_score = latest_analysis.risk_score if latest_analysis else None
             current_risk_level = latest_analysis.risk_level if latest_analysis else None
             last_analysis_date = latest_analysis.created_at if latest_analysis else None
 
@@ -63,6 +70,10 @@ async def get_watchlist(
             score_change = None
             if item.last_known_risk_score and current_risk_score:
                 score_change = current_risk_score - item.last_known_risk_score
+
+            # ========== NEW: Get real-time price ==========
+            price_data = get_real_time_price(company.nse_symbol or company.display_code)
+            # ==============================================
 
             response_items.append(WatchlistItemResponse(
                 watchlist_id=item.id,
@@ -78,6 +89,15 @@ async def get_watchlist(
                 last_analysis_date=last_analysis_date,
                 added_date=item.added_at,
                 alert_enabled=item.alert_enabled,
+                latest_analysis_id=latest_analysis.id if latest_analysis else None,
+                # ========== Real-time price data ==========
+                current_price=price_data.get("current_price") or None if price_data else None,
+                price_change=None,  # API returns percent only, no absolute change
+                price_change_percent=price_data.get("change_percent") if price_data and price_data.get("current_price") else None,
+                high=price_data.get("high52") or None if price_data else None,
+                low=price_data.get("low52") or None if price_data else None,
+                volume=price_data.get("volume") or None if price_data else None,
+                # ==========================================
             ))
 
         # Get recent alerts (last 30 days, unread first)
@@ -113,15 +133,14 @@ async def get_watchlist(
         return WatchlistResponse(
             user_id=current_user.id,
             items=response_items,
-            total_watched=len(response_items),
-            recent_alerts=alert_responses,
+            alerts=alert_responses,
         )
 
     except Exception as e:
-        logger.error(f"Error getting watchlist: {e}", exc_info=True)
+        logger.error(f"Error fetching watchlist: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get watchlist: {str(e)}"
+            detail=f"Failed to fetch watchlist: {str(e)}"
         )
 
 
@@ -130,21 +149,25 @@ async def get_watchlist(
     response_model=WatchlistItemResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add company to watchlist",
-    description="Add a company to user's watchlist.",
+    description="Add a company to user's watchlist. AUTO-TRIGGERS analysis if not already exists.",
 )
 async def add_to_watchlist(
     data: WatchlistItemCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Add company to watchlist."""
+    """
+    Add company to watchlist.
+    
+    AUTO-TRIGGERS analysis if no analysis exists for this company.
+    """
     try:
         # Check if company exists
         company = db.query(Company).filter(Company.id == data.company_id).first()
         if not company:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Company not found: {data.company_id}"
+                detail="Company not found"
             )
 
         # Check if already in watchlist
@@ -155,28 +178,43 @@ async def add_to_watchlist(
 
         if existing:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_409_CONFLICT,
                 detail="Company already in watchlist"
             )
 
-        # Get latest risk score
-        latest_analysis = db.query(AnalysisResult).filter(
-            AnalysisResult.company_id == company.id
+        # Get latest analysis for risk score — join via AnnualReport
+        latest_analysis = db.query(AnalysisResult).join(
+            AnnualReport, AnalysisResult.report_id == AnnualReport.id
+        ).filter(
+            AnnualReport.company_id == company.id
         ).order_by(AnalysisResult.created_at.desc()).first()
 
         # Create watchlist item
         watchlist_item = WatchlistItem(
             user_id=current_user.id,
-            company_id=data.company_id,
+            company_id=company.id,
             alert_enabled=data.alert_enabled,
-            last_known_risk_score=latest_analysis.overall_risk_score if latest_analysis else None,
+            last_known_risk_score=latest_analysis.risk_score if latest_analysis else None
         )
-
         db.add(watchlist_item)
         db.commit()
         db.refresh(watchlist_item)
 
-        # Build response
+        # ========== AUTO-TRIGGER ANALYSIS IF NOT EXISTS ==========
+        auto_analysis_triggered = False
+        if not latest_analysis:
+            logger.info(f"🚀 Auto-triggering analysis for {company.display_code} (added to watchlist)")
+            symbol = map_broker_symbol(company.nse_symbol or company.display_code)
+            # Call .delay() directly — Celery dispatches the task to the worker queue
+            task = analyze_company_by_symbol_task.delay(symbol, str(current_user.id))
+            logger.info(f"✓ Celery task dispatched: {task.id} for symbol {symbol}")
+            auto_analysis_triggered = True
+        # ==========================================================
+
+        # ========== NEW: Get real-time price ==========
+        price_data = get_real_time_price(company.nse_symbol or company.display_code)
+        # ==============================================
+
         return WatchlistItemResponse(
             watchlist_id=watchlist_item.id,
             company_id=company.id,
@@ -184,13 +222,23 @@ async def add_to_watchlist(
             company_name=company.name,
             industry=company.industry,
             sector=company.sector,
-            current_risk_score=latest_analysis.overall_risk_score if latest_analysis else None,
+            current_risk_score=latest_analysis.risk_score if latest_analysis else None,
             current_risk_level=latest_analysis.risk_level if latest_analysis else None,
             previous_risk_score=None,
             score_change=None,
             last_analysis_date=latest_analysis.created_at if latest_analysis else None,
             added_date=watchlist_item.added_at,
             alert_enabled=watchlist_item.alert_enabled,
+            latest_analysis_id=latest_analysis.id if latest_analysis else None,
+            auto_analysis_triggered=auto_analysis_triggered,
+            # ========== Real-time price data ==========
+            current_price=price_data.get("current_price") or None if price_data else None,
+            price_change=None,  # API returns percent only, no absolute change
+            price_change_percent=price_data.get("change_percent") if price_data and price_data.get("current_price") else None,
+            high=price_data.get("high52") or None if price_data else None,
+            low=price_data.get("low52") or None if price_data else None,
+            volume=price_data.get("volume") or None if price_data else None,
+            # ==========================================
         )
 
     except HTTPException:
@@ -217,7 +265,6 @@ async def remove_from_watchlist(
 ):
     """Remove company from watchlist."""
     try:
-        # Find watchlist item
         item = db.query(WatchlistItem).filter(
             WatchlistItem.id == watchlist_id,
             WatchlistItem.user_id == current_user.id
@@ -239,133 +286,48 @@ async def remove_from_watchlist(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to remove from watchlist: {str(e)}"
-        )
-
-
-@router.get(
-    "/alerts",
-    response_model=List[WatchlistAlertResponse],
-    summary="Get watchlist alerts",
-    description="Get user's watchlist alerts with optional filtering.",
-)
-async def get_alerts(
-    unread_only: bool = Query(False, description="Show only unread alerts"),
-    limit: int = Query(50, ge=1, le=200, description="Maximum number of alerts"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get user's watchlist alerts."""
-    try:
-        query = db.query(WatchlistAlert).join(
-            WatchlistItem
-        ).filter(
-            WatchlistItem.user_id == current_user.id
-        )
-
-        if unread_only:
-            query = query.filter(WatchlistAlert.is_read == False)
-
-        alerts = query.order_by(
-            WatchlistAlert.created_at.desc()
-        ).limit(limit).all()
-
-        responses = []
-        for alert in alerts:
-            item = alert.watchlist_item
-            company = item.company
-
-            responses.append(WatchlistAlertResponse(
-                alert_id=alert.id,
-                company_id=company.id,
-                symbol=company.display_code,
-                company_name=company.name,
-                alert_type=alert.alert_type,
-                severity=alert.severity,
-                message=alert.message,
-                created_at=alert.created_at,
-                is_read=alert.is_read,
-                previous_risk_score=alert.previous_risk_score,
-                current_risk_score=alert.current_risk_score,
-                score_change=alert.score_change,
-            ))
-
-        return responses
-
-    except Exception as e:
-        logger.error(f"Error getting alerts: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get alerts: {str(e)}"
+            detail="Failed to remove from watchlist"
         )
 
 
 @router.patch(
-    "/alerts/{alert_id}",
-    response_model=WatchlistAlertResponse,
-    summary="Mark alert as read/unread",
-    description="Update alert read status.",
+    "/{watchlist_id}/alerts",
+    summary="Toggle watchlist alerts",
+    description="Enable/disable alerts for a watchlist item.",
 )
-async def update_alert_status(
-    alert_id: UUID,
-    data: WatchlistAlertMarkRead,
+async def toggle_watchlist_alerts(
+    watchlist_id: UUID,
+    alert_enabled: bool,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Mark alert as read or unread."""
+    """Toggle alerts for watchlist item."""
     try:
-        # Find alert
-        alert = db.query(WatchlistAlert).join(
-            WatchlistItem
-        ).filter(
-            WatchlistAlert.id == alert_id,
+        item = db.query(WatchlistItem).filter(
+            WatchlistItem.id == watchlist_id,
             WatchlistItem.user_id == current_user.id
         ).first()
 
-        if not alert:
+        if not item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Alert not found"
+                detail="Watchlist item not found"
             )
 
-        # Update status
-        alert.is_read = data.is_read
-        if data.is_read:
-            from datetime import datetime
-            alert.read_at = datetime.utcnow()
-
+        item.alert_enabled = alert_enabled
         db.commit()
-        db.refresh(alert)
 
-        # Build response
-        item = alert.watchlist_item
-        company = item.company
-
-        return WatchlistAlertResponse(
-            alert_id=alert.id,
-            company_id=company.id,
-            symbol=company.display_code,
-            company_name=company.name,
-            alert_type=alert.alert_type,
-            severity=alert.severity,
-            message=alert.message,
-            created_at=alert.created_at,
-            is_read=alert.is_read,
-            previous_risk_score=alert.previous_risk_score,
-            current_risk_score=alert.current_risk_score,
-            score_change=alert.score_change,
-        )
+        return {"message": "Alert settings updated", "alert_enabled": alert_enabled}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating alert: {e}", exc_info=True)
+        logger.error(f"Error toggling alerts: {e}", exc_info=True)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update alert: {str(e)}"
+            detail="Failed to update alert settings"
         )
-
 
 @router.get(
     "/preferences",
@@ -439,8 +401,8 @@ async def update_notification_preferences(
         if data.feature_announcements_enabled is not None:
             prefs.feature_announcements_enabled = data.feature_announcements_enabled
         if data.push_notifications_enabled is not None:
-            # Check if user has Premium subscription for push notifications
-            if data.push_notifications_enabled and current_user.subscription_tier != "premium":
+            # Check if user has Premium subscription for push notifications — admins bypass
+            if data.push_notifications_enabled and not current_user.is_admin and current_user.subscription_tier != "premium":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Push notifications require Premium subscription"
@@ -488,8 +450,8 @@ async def save_push_subscription(
     try:
         import json
 
-        # Check Premium subscription
-        if current_user.subscription_tier != 'premium':
+        # Check Premium subscription — admins always bypass
+        if not current_user.is_admin and current_user.subscription_tier != 'premium':
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Push notifications require Premium subscription"
