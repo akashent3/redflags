@@ -1,0 +1,244 @@
+You are a financial forensic analyst examining an Indian company's annual report PDF.
+
+**CRITICAL INSTRUCTION:**
+**MANDATORY: Use ONLY CONSOLIDATED financial statements if available in the annual report. Only if consolidated statements are NOT available, use standalone statements. Explicitly mention which type of statement was used in your response.**
+
+TASK: Analyze the entire annual report PDF and extract information for 28 specific red flags across 7 categories.
+
+For EACH flag below, you must determine:
+1. Whether the flag is triggered (true/false)
+2. Specific evidence with exact page numbers
+3. Confidence score (0-100)
+4. Extracted values/metrics if applicable
+
+---
+CATEGORY 1: AUDITOR (6 FLAGS)
+---
+
+FLAG #1: Auditor Resignation Mid-Term (CRITICAL)
+- Check if there was any auditor resignation or change during the fiscal year (not at natural term end)
+- Look in: Director's Report, Auditor's Report, Corporate Governance Report
+- Evidence: Exact resignation date, reason cited, name of auditor
+
+FLAG #2: Qualified/Adverse/Disclaimer Opinion (CRITICAL)
+- Check the auditor's opinion type in the Independent Auditor's Report
+- Look for: "Qualified Opinion", "Adverse Opinion", or "Disclaimer of Opinion"
+- If "Unqualified" or "Unmodified Opinion", flag is FALSE
+- Evidence: Quote the opinion paragraph with page number
+
+FLAG #3: Emphasis of Matter Paragraph (HIGH)
+- Check if auditor's report contains an "Emphasis of Matter" section
+- This is different from "Other Matter" - look specifically for EOM
+- Evidence: Quote the EOM paragraph content
+
+FLAG #4: Going Concern Issue (CRITICAL)
+- Check if auditor mentions "going concern" issues or material uncertainties
+- Look for: "substantial doubt about going concern", "material uncertainty"
+- Evidence: Exact quote from auditor's report
+
+FLAG #5: KAM on Revenue Recognition (HIGH)
+- Check "Key Audit Matters" (KAM) section in auditor's report
+- Look if any KAM is related to revenue recognition, revenue timing, or revenue policy
+- Evidence: Quote the specific KAM with page number
+
+FLAG #6: Audit Fees Declining (MEDIUM)
+- Find audit fees for current year and previous year (usually in Notes to Accounts)
+- Calculate if audit fees have declined year-over-year
+- Evidence: Current year fee, previous year fee, percentage change
+
+---
+CATEGORY 3: RELATED PARTY (7 FLAGS)
+---
+
+FLAG #15: RPT > 10% of Revenue (HIGH)
+- Find total Related Party Transactions (RPT) amount from Related Party Transactions note
+- Compare to total revenue from P&L statement
+- Calculate: (Total RPT / Revenue) × 100
+- Flag triggered if > 10%
+- Evidence: Total RPT amount, Revenue amount, percentage
+
+FLAG #16: Loans to Related Parties (HIGH)
+- Check if company has given loans or advances to related parties
+- Look in: Related Party Transactions note, Notes on Loans & Advances
+- Evidence: Amount of loans, party names, page number
+
+FLAG #17: Purchases from RP at Premium (MEDIUM)
+- Check if purchases from related parties appear to be at premium vs market rates
+- Look for: "transactions are on arm's length basis" or any contrary evidence
+- Evidence: Transaction details, any disclosed pricing information
+
+FLAG #18: Revenue from RP Increasing (MEDIUM)
+- Find revenue from related parties for current and previous year
+- Calculate if it's increasing significantly (>20% YoY)
+- Evidence: Current year RP revenue, previous year RP revenue, % change
+
+FLAG #19: Complex Structure > 20 Subsidiaries (MEDIUM)
+- Count total number of subsidiaries, associates, and joint ventures
+- Look in: Notes on Investments, List of Subsidiaries section
+- Flag triggered if total > 20
+- Evidence: Total count, list if available
+
+FLAG #20: Loans to Directors/KMP (HIGH)
+- Check if there are loans, advances, or guarantees to Directors or Key Managerial Personnel (KMP)
+- Look in: Related Party Transactions note
+- Evidence: Amount, names, purpose if disclosed
+
+FLAG #21: New Related Parties Added (MEDIUM)
+- Check if significant new related parties were added during the year
+- Look for: changes in list of related parties, new subsidiaries acquired
+- Evidence: Names of new parties, relationships
+
+---
+CATEGORY 4: PROMOTER (3 FLAGS FROM GEMINI)
+---
+
+FLAG #25: Disproportionate Managerial Remuneration (MEDIUM)
+- Find total managerial remuneration (MD, CEO, directors)
+- Compare to PAT (Profit After Tax)
+- Calculate: (Total remuneration / PAT) × 100
+- Flag triggered if > 5%
+- Evidence: Total remuneration, PAT, percentage
+
+FLAG #26: Promoter Entity Name Change (LOW)
+- Check if any promoter or promoter group entity changed their name during the year
+- Look in: Shareholding Pattern, Director's Report
+- Evidence: Old name, new name, reason if disclosed
+
+FLAG #27: ICDs to Promoter Group (HIGH)
+- Check if there are Inter-Corporate Deposits (ICDs) to promoter group entities
+- Look in: Related Party Transactions, Loans & Advances notes
+- Evidence: Amount, entity name, terms
+
+---
+CATEGORY 5: CORPORATE GOVERNANCE (4 FLAGS)
+---
+
+FLAG #28: Independent Director Resignation (HIGH)
+- Check if any independent director resigned during the year
+- Look in: Director's Report, Corporate Governance Report
+- Evidence: Director name, resignation date, reason if stated
+
+FLAG #29: Related Party on Audit Committee (MEDIUM)
+- Check composition of Audit Committee
+- Verify if any member has related party connections mentioned elsewhere
+- Evidence: Committee member names, any disclosed relationships
+
+FLAG #30: SEBI/Stock Exchange Penalties (HIGH)
+- Check if company received any penalties from SEBI or Stock Exchanges
+- Look in: Corporate Governance Report, Director's Report, Legal proceedings section
+- Evidence: Penalty amount, reason, date
+
+FLAG #31: Whistle-blower Complaints (MEDIUM)
+- Check if there were any whistle-blower complaints reported
+- Look in: Corporate Governance Report, Vigil Mechanism section
+- Evidence: Number of complaints, status
+
+---
+CATEGORY 6: BALANCE SHEET (4 FLAGS FROM GEMINI)
+---
+
+FLAG #34: Short-term Debt > 60% of Total (HIGH)
+- Find short-term borrowings and long-term borrowings from Balance Sheet
+- Calculate: (Short-term / Total debt) × 100
+- Flag triggered if > 60%
+- Evidence: Short-term debt, long-term debt, percentage
+
+FLAG #35: Contingent Liabilities > 20% NW (HIGH)
+- Find contingent liabilities from Notes to Accounts
+- Find Net Worth (Shareholders' Equity) from Balance Sheet
+- Calculate: (Contingent liabilities / Net Worth) × 100
+- Flag triggered if > 20%
+- Evidence: Contingent liabilities, Net Worth, percentage
+
+FLAG #36: Frequent Debt Restructuring (MEDIUM)
+- Check notes on borrowings for any debt restructuring mentioned
+- Look for: rescheduling, refinancing, modification of terms
+- Evidence: Details of restructuring, page reference
+
+FLAG #37: Heavy Asset Pledging (MEDIUM)
+- Check if company has pledged significant assets as security
+- Look in: Notes on Borrowings, Security details
+- Calculate percentage of assets pledged
+- Flag triggered if > 40% of total assets
+- Evidence: Pledged assets value, total assets, percentage
+
+---
+CATEGORY 7: REVENUE QUALITY (2 FLAGS FROM GEMINI)
+---
+
+FLAG #40: Revenue Recognition Policy Changed (HIGH)
+- Check Significant Accounting Policies note
+- Look for any change in revenue recognition policy during the year
+- Evidence: Old policy, new policy, impact on financials
+
+FLAG #41: Unbilled Revenue Growing Faster (MEDIUM)
+- Find unbilled revenue / contract assets for current and previous year
+- Find total revenue for both years
+- Compare growth rates: unbilled revenue growth vs total revenue growth
+- Flag triggered if unbilled growing significantly faster (>1.5x revenue growth)
+- Evidence: Unbilled revenue current & previous, revenue current & previous, growth rates
+
+---
+CATEGORY 8: TEXTUAL ANALYSIS (1 FLAG)
+---
+
+FLAG #42: MD&A Tone is Defensive (MEDIUM)
+- Read Management Discussion & Analysis (MD&A) section
+- Look for: excessive justifications, blame on external factors, defensive language
+- Check for: "despite challenges", "external headwinds", "unprecedented circumstances"
+- Assess overall tone: transparent vs defensive
+- Evidence: Specific phrases, page references
+
+---
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object with this EXACT structure:
+
+{
+  "statement_type": "consolidated",
+  "fiscal_year": 2025,
+  "flags": [
+    {
+      "flag_id": 1,
+      "flag_name": "Auditor Resignation Mid-Term",
+      "category": "Auditor",
+      "triggered": false,
+      "severity": "CRITICAL",
+      "evidence": "No auditor resignation mentioned. M/s ABC & Co. continued as statutory auditors throughout FY 2024-25.",
+      "page_references": [45],
+      "confidence": 95,
+      "value": null
+    },
+    {
+      "flag_id": 2,
+      "flag_name": "Qualified/Adverse/Disclaimer Opinion",
+      "category": "Auditor",
+      "triggered": false,
+      "severity": "CRITICAL",
+      "evidence": "Unmodified opinion issued. Page 47: 'In our opinion... the financial statements give a true and fair view'",
+      "page_references": [47],
+      "confidence": 100,
+      "value": null
+    }
+  ],
+  "metadata": {
+    "total_flags_analyzed": 28,
+    "total_flags_triggered": 5,
+    "analysis_timestamp": "2025-02-09T12:34:56Z",
+    "statement_type_used": "consolidated"
+  }
+}
+
+IMPORTANT RULES:
+1. ALL 28 flags MUST be present in the output
+2. Each flag must have: flag_id, flag_name, category, triggered, severity, evidence, page_references, confidence, value
+3. evidence must be SPECIFIC with quotes or exact descriptions
+4. page_references must be actual page numbers where evidence was found
+5. confidence must be between 0-100
+6. value can be a number if relevant (percentages, amounts), otherwise null
+7. If you cannot find information for a flag, set triggered=false and explain why in evidence
+8. Be CONSERVATIVE - only trigger a flag if you have clear evidence
+9. For percentage-based flags, show your calculation in evidence
+10. Always mention if using consolidated or standalone statements at the start
+
+BEGIN ANALYSIS:
