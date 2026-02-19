@@ -11,7 +11,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Shield, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
+import { Shield, ArrowRight } from 'lucide-react'; // Shield still used in hero badge
 
 export default function Home() {
   const router = useRouter();
@@ -37,12 +38,16 @@ export default function Home() {
       <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">
-                RedFlag AI
-              </span>
-            </div>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="StockForensics"
+                width={180}
+                height={50}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+            </Link>
             <div className="flex items-center gap-4">
               <Link href="/login">
                 <Button variant="ghost">Sign in</Button>
@@ -92,7 +97,7 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Why Choose RedFlag AI?
+            Why Choose StockForensics?
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Leverage cutting-edge AI to uncover hidden risks in financial statements
@@ -106,11 +111,11 @@ export default function Home() {
               <Shield className="h-6 w-6 text-blue-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
-              54 Red Flag Detectors
+              44 / 35 Forensic Checks
             </h3>
             <p className="text-gray-600">
-              Our AI analyzes 8 categories including cash flow manipulation,
-              related party transactions, and auditor concerns.
+              44 checks for non-financial companies, 35 for banks and NBFCs —
+              spanning 8 categories including cash flow, related-party transactions, and auditor concerns.
             </p>
           </div>
 
@@ -126,7 +131,7 @@ export default function Home() {
             </h3>
             <p className="text-gray-600">
               Upload any annual report PDF and get comprehensive forensic analysis
-              in under 60 seconds powered by Google Gemini.
+              in under 60 seconds, powered by AI.
             </p>
           </div>
 
@@ -183,7 +188,7 @@ export default function Home() {
                 AI Analysis
               </h3>
               <p className="text-gray-600">
-                Our AI extracts data, detects patterns, and checks 54 red flags
+                Our AI reads the document and runs quantitative checks across all flag categories
               </p>
             </div>
 
@@ -240,7 +245,7 @@ export default function Home() {
                 <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">54 red flag checks</span>
+                <span className="text-gray-700">Full forensic analysis (44 / 35 checks)</span>
               </li>
             </ul>
             <Link href="/signup">
@@ -280,12 +285,6 @@ export default function Home() {
                 <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">Portfolio scanner</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
                 <span className="text-gray-700">Watchlist & alerts</span>
               </li>
             </ul>
@@ -315,19 +314,25 @@ export default function Home() {
                 <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">Multi-year trends</span>
+                <span className="text-gray-700">Portfolio scanner & heatmap</span>
               </li>
               <li className="flex items-start gap-2">
                 <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">Peer comparison</span>
+                <span className="text-gray-700">Fraud database access</span>
               </li>
               <li className="flex items-start gap-2">
                 <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span className="text-gray-700">Priority support</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-gray-700">Early access to new features</span>
               </li>
             </ul>
             <Link href="/signup">
@@ -351,8 +356,8 @@ export default function Home() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               <div>
-                <div className="text-5xl font-bold mb-2">54</div>
-                <div className="text-blue-100">Red Flag Checks</div>
+                <div className="text-5xl font-bold mb-2">44/35</div>
+                <div className="text-blue-100">Forensic Checks</div>
               </div>
               <div>
                 <div className="text-5xl font-bold mb-2">500+</div>
@@ -398,12 +403,15 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             {/* Brand */}
             <div className="col-span-1 md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <Shield className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold text-gray-900">
-                  RedFlag AI
-                </span>
-              </div>
+              <Link href="/" className="inline-flex mb-3">
+                <Image
+                  src="/logo.png"
+                  alt="StockForensics"
+                  width={160}
+                  height={44}
+                  className="h-9 w-auto object-contain"
+                />
+              </Link>
               <p className="text-sm text-gray-600">
                 AI-powered forensic accounting for smarter investment decisions
               </p>
@@ -415,12 +423,7 @@ export default function Home() {
               <ul className="space-y-2">
                 <li>
                   <Link href="/features" className="text-sm text-gray-600 hover:text-blue-600">
-                    Features
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/pricing" className="text-sm text-gray-600 hover:text-blue-600">
-                    Pricing
+                    Features &amp; Pricing
                   </Link>
                 </li>
                 <li>
@@ -445,11 +448,6 @@ export default function Home() {
                     Contact
                   </Link>
                 </li>
-                <li>
-                  <Link href="/blog" className="text-sm text-gray-600 hover:text-blue-600">
-                    Blog
-                  </Link>
-                </li>
               </ul>
             </div>
 
@@ -458,13 +456,8 @@ export default function Home() {
               <h3 className="font-semibold text-gray-900 mb-4">Legal</h3>
               <ul className="space-y-2">
                 <li>
-                  <Link href="/privacy" className="text-sm text-gray-600 hover:text-blue-600">
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="text-sm text-gray-600 hover:text-blue-600">
-                    Terms of Service
+                  <Link href="/legal" className="text-sm text-gray-600 hover:text-blue-600">
+                    Privacy &amp; Terms
                   </Link>
                 </li>
               </ul>
@@ -474,10 +467,10 @@ export default function Home() {
           <div className="border-t border-gray-200 pt-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500">
-                © 2026 RedFlag AI. All rights reserved.
+                © {new Date().getFullYear()} StockForensics. All rights reserved.
               </p>
               <p className="text-sm text-gray-500">
-                Powered by Google Gemini AI
+                Powered by AI
               </p>
             </div>
           </div>

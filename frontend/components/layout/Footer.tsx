@@ -17,7 +17,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Left Section - Copyright */}
           <div className="text-sm text-gray-600">
-            © {currentYear} RedFlag AI. All rights reserved.
+            © {currentYear} StockForensics. All rights reserved.
           </div>
 
           {/* Center Section - Links */}
@@ -29,16 +29,16 @@ export default function Footer() {
               About
             </Link>
             <Link
-              href="/privacy"
+              href="/features"
               className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
-              Privacy
+              Features
             </Link>
             <Link
-              href="/terms"
+              href="/legal"
               className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
-              Terms
+              Privacy &amp; Terms
             </Link>
             <Link
               href="/contact"
@@ -50,8 +50,7 @@ export default function Footer() {
 
           {/* Right Section - Attribution */}
           <div className="text-sm text-gray-500">
-            Powered by{' '}
-            <span className="text-blue-600 font-medium">Google Gemini AI</span>
+            Powered by AI
           </div>
         </div>
       </div>
